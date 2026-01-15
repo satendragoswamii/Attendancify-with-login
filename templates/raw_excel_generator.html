@@ -1,6 +1,6 @@
 {% extends "base_comprehensive.html" %}
 
-{% block title %}Raw Excel Generator - Attendancify{% endblock %}
+{% block title %}{{ app_names.app3 if app_names else 'Session Report Generator' }} - Attendancify{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-2 tool-page-container" style="height: 100%; overflow-y: auto;">
@@ -8,7 +8,7 @@
         <div class="col-xxl-10 col-xl-11 col-lg-12">
             <div class="card tool-card">
                 <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
-                    <h3 class="mb-0 fs-5"><i class="fas fa-file-excel me-2"></i>Raw Excel Generator</h3>
+                    <h3 class="mb-0 fs-5"><i class="fas fa-file-excel me-2"></i>{{ app_names.app3 if app_names else 'Session Report Generator' }}</h3>
                     <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-secondary py-1 px-2">
                         <i class="fas fa-arrow-left me-1"></i>Back to Home
                     </a>
@@ -20,9 +20,9 @@
                             <i class="fas fa-info-circle me-2"></i>
                             <span class="small">Demo mode. File processing requires login.</span>
                         </div>
-                        <button class="btn btn-sm btn-outline-light ms-2 py-1 px-2" data-bs-toggle="modal" data-bs-target="#loginModal">
+                        <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-light ms-2 py-1 px-2">
                             <i class="fas fa-sign-in-alt me-1"></i>Login
-                        </button>
+                        </a>
                     </div>
                     {% else %}
                     <div class="alert alert-success d-flex align-items-center py-2 px-3 mb-3">
@@ -41,14 +41,14 @@
                     <div class="row">
                         <div class="col-lg-6 mb-3 mb-lg-0">
                             <h5 class="mb-2 fs-6">Upload Final Attendance Files</h5>
-                            <form id="excelForm" method="POST" action="{{ url_for('process_raw_excel') }}" enctype="multipart/form-data" data-logged-in="{% if session.user_id %}true{% else %}false{% endif %}">
+                            <form id="excelForm" method="POST" action="{{ url_for('process_raw_excel') }}" enctype="multipart/form-data">
                                 <div class="mb-2">
                                     <label for="excel_files" class="form-label small">Select Final Attendance Files (.xlsx)</label>
                                     <input class="form-control form-control-sm" type="file" id="excel_files" name="excel_files" accept=".xlsx" multiple {% if not session.user_id %}disabled{% endif %}>
                                     <div class="form-text small">Upload files from Attendance Generator tool</div>
                                 </div>
                                 
-                                <button type="submit" class="btn btn-primary w-100 btn-sm py-2" id="submitBtn">
+                                <button type="submit" class="btn btn-primary w-100 btn-sm py-2" id="submitBtn" {% if not session.user_id %}disabled{% endif %}>
                                     <i class="fas fa-cogs me-2"></i>Process Files
                                 </button>
                             </form>
@@ -82,16 +82,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const excelForm = document.getElementById('excelForm');
     const submitBtn = document.getElementById('submitBtn');
     
-    // Check if user is logged in from data attribute
-    const isLoggedIn = excelForm.getAttribute('data-logged-in') === 'true';
+    // Check if user is logged in
+    const isLoggedIn = '{{ session.user_id }}' !== '';
     
     // Form submission protection for non-logged-in users
     if (excelForm && !isLoggedIn) {
         excelForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            // Show login modal
-            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            loginModal.show();
+            // Redirect to login page
+            window.location.href = '{{ url_for("login") }}';
             return false;
         });
     }
@@ -100,8 +99,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (submitBtn && !isLoggedIn) {
         submitBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            loginModal.show();
+            // Redirect to login page
+            window.location.href = '{{ url_for("login") }}';
             return false;
         });
     }

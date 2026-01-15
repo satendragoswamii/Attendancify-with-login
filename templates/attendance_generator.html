@@ -1,6 +1,6 @@
 {% extends "base_comprehensive.html" %}
 
-{% block title %}Attendance Generator - Attendancify{% endblock %}
+{% block title %}{{ app_names.app1 if app_names else 'Zoom Attendance Analyzer' }} - Attendancify{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-2 tool-page-container" style="height: 100%; overflow-y: auto;">
@@ -8,7 +8,7 @@
         <div class="col-xxl-10 col-xl-11 col-lg-12">
             <div class="card tool-card">
                 <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
-                    <h3 class="mb-0 fs-5"><i class="fas fa-calendar-check me-2"></i>Attendance Generator</h3>
+                    <h3 class="mb-0 fs-5"><i class="fas fa-calendar-check me-2"></i>{{ app_names.app1 if app_names else 'Zoom Attendance Analyzer' }}</h3>
                     <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-secondary py-1 px-2">
                         <i class="fas fa-arrow-left me-1"></i>Back to Home
                     </a>
@@ -20,19 +20,19 @@
                             <i class="fas fa-info-circle me-2 fa-lg"></i>
                             <span>Demo mode. File processing requires login.</span>
                         </div>
-                        <button class="btn btn-sm btn-outline-light ms-2 py-1 px-3" data-bs-toggle="modal" data-bs-target="#loginModal">
+                        <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-light ms-2 py-1 px-3">
                             <i class="fas fa-sign-in-alt me-1"></i>Login
-                        </button>
+                        </a>
                     </div>
                     {% else %}
                     <div class="alert alert-success d-flex align-items-center justify-content-between py-2 px-3 mb-3 rounded-pill">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-user-check me-2 fa-lg"></i>
-                            <span>You are logged in as <strong>{{ session.user_id }}</strong> ({{ session.role|title }})
+                            {% set first_name = session.first_name or session.user_id %}
                             {% set remaining = get_remaining_time(session.user_id) %}
-                            {% if remaining and remaining != 'Permanent' %}
-                                - Access expires in: <strong>{{ remaining }}</strong>
-                            {% endif %}
+                            {% set last_activity = session.last_activity %}
+                            <span>
+                                Logged in as <strong>{{ first_name }}</strong> ({{ session.role|title }})
                             </span>
                         </div>
                     </div>
@@ -41,14 +41,11 @@
                     <div class="row">
                         <div class="col-lg-6 mb-3 mb-lg-0">
                             <h5 class="mb-2 fs-6">Upload Zoom Session Logs</h5>
-                            <form id="attendanceForm" method="POST" action="{{ url_for('upload_attendance_file') }}" enctype="multipart/form-data" data-logged-in="{% if session.user_id %}true{% else %}false{% endif %}">
-                                <!-- Hidden input to force multiple mode -->
-                                <input type="hidden" name="mode" value="multiple">
-                                
+                            <form id="attendanceForm" method="POST" action="{{ url_for('upload_attendance_file') }}" enctype="multipart/form-data">
                                 <div class="mb-2">
-                                    <label for="csv_files" class="form-label small">Select Zoom Log Files</label>
+                                    <label for="csv_files" class="form-label small">Select Zoom Log File(s)</label>
                                     <input class="form-control form-control-sm" type="file" id="csv_files" name="csv_files" accept=".csv,.xlsx" multiple {% if not session.user_id %}disabled{% endif %}>
-                                    <div class="form-text small">Upload CSV or Excel format files</div>
+                                    <div class="form-text small">You can upload one or more CSV/Excel files.</div>
                                 </div>
                                 
                                 <div class="alert alert-warning compact d-flex align-items-center py-1 px-2 mb-2 rounded-pill">
@@ -56,7 +53,7 @@
                                     <span class="small">Human verification required for this tool</span>
                                 </div>
                                 
-                                <button type="submit" class="btn btn-primary w-100 btn-sm py-2" id="submitBtn">
+                                <button type="submit" class="btn btn-primary w-100 btn-sm py-2" id="submitBtn" {% if not session.user_id %}disabled{% endif %}>
                                     <i class="fas fa-upload me-2"></i>Upload and Configure
                                 </button>
                             </form>
@@ -93,16 +90,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const attendanceForm = document.getElementById('attendanceForm');
     const submitBtn = document.getElementById('submitBtn');
     
-    // Check if user is logged in from data attribute
-    const isLoggedIn = attendanceForm.getAttribute('data-logged-in') === 'true';
+    // Check if user is logged in
+    const isLoggedIn = '{{ session.user_id }}' !== '';
     
     // Form submission protection for non-logged-in users
     if (attendanceForm && !isLoggedIn) {
         attendanceForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            // Show login modal
-            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            loginModal.show();
+            // Redirect to login page
+            window.location.href = '{{ url_for("login") }}';
             return false;
         });
     }
@@ -111,8 +107,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (submitBtn && !isLoggedIn) {
         submitBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            loginModal.show();
+            // Redirect to login page
+            window.location.href = '{{ url_for("login") }}';
             return false;
         });
     }

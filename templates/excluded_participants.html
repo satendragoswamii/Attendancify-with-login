@@ -1,0 +1,451 @@
+{% extends "base_comprehensive.html" %}
+{% block title %}Excluded Participants - Attendancify{% endblock %}
+{% block content %}
+<style>
+    /* Help popup styles - Fixed visibility */
+    .help-popup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--bg-card);
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        box-shadow: var(--shadow-lg), 0 0 0 1000px rgba(0, 0, 0, 0.5);
+        z-index: 1060;
+        min-width: 400px;
+        max-width: 500px;
+        max-height: 80vh;
+        overflow-y: auto;
+        display: none;
+    }
+    .help-popup.show {
+        display: block;
+    }
+    .help-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        transition: var(--transition-fast);
+        cursor: pointer;
+    }
+    .help-btn:hover {
+        background: var(--primary-accent);
+        border-color: var(--primary-accent);
+        color: #fff;
+        transform: scale(1.1);
+    }
+    /* Fixed button styles for both themes */
+    .btn-clear-all {
+        background: transparent !important;
+        border: 1px solid var(--error-color) !important;
+        color: var(--error-color) !important;
+        transition: var(--transition-fast);
+    }
+    .btn-clear-all:hover {
+        background: var(--error-color) !important;
+        border-color: var(--error-color) !important;
+        color: #fff !important;
+    }
+    .btn-remove-item {
+        background: transparent !important;
+        border: 1px solid var(--error-color) !important;
+        color: var(--error-color) !important;
+        transition: var(--transition-fast);
+    }
+    .btn-remove-item:hover {
+        background: var(--error-color) !important;
+        border-color: var(--error-color) !important;
+        color: #fff !important;
+    }
+    .btn-edit-item {
+        background: transparent !important;
+        border: 1px solid var(--info-color) !important;
+        color: var(--info-color) !important;
+        transition: var(--transition-fast);
+    }
+    .btn-edit-item:hover {
+        background: var(--info-color) !important;
+        border-color: var(--info-color) !important;
+        color: #fff !important;
+    }
+    /* Ensure rounded corners visible */
+    .excluded-container {
+        border-radius: var(--radius-md);
+        overflow: visible;
+    }
+    .excluded-card {
+        border-radius: var(--radius-md);
+        overflow: hidden;
+    }
+    /* Edit input styles */
+    .edit-input {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        border: 1px solid var(--primary-accent);
+        border-radius: 4px;
+        width: 100%;
+    }
+    /* Scrollable table container */
+    .table-container {
+        max-height: calc(100vh - 280px);
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    .table-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    .table-container::-webkit-scrollbar-track {
+        background: var(--bg-elevated);
+    }
+    .table-container::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 3px;
+    }
+    .table-container::-webkit-scrollbar-thumb:hover {
+        background: var(--text-tertiary);
+    }
+</style>
+
+<div class="container-fluid px-3 py-2 excluded-container" style="height: calc(100vh - 100px); display: flex; flex-direction: column; overflow: hidden; background: var(--bg-primary);">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0">
+        <div class="d-flex align-items-center gap-2">
+            <h5 class="mb-0" style="color: var(--text-primary);">
+                <i class="fas fa-user-slash me-2" style="color: var(--error-color);"></i>
+                Excluded Participants
+            </h5>
+            <!-- Help Button -->
+            <button type="button" class="help-btn" onclick="toggleHelp()" title="How to use">
+                <i class="fas fa-question" style="font-size: 0.75rem;"></i>
+            </button>
+        </div>
+        <a href="{{ url_for('manage_batches') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Back to Batches
+        </a>
+    </div>
+
+    <!-- Help Popup Modal -->
+    <div id="helpPopup" class="help-popup">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <h6 class="mb-0" style="font-size: 0.9rem; color: var(--text-primary); font-weight: 700;">
+                <i class="fas fa-info-circle me-1" style="color: var(--info-color);"></i>
+                How It Works
+            </h6>
+            <button type="button" class="btn-close" onclick="toggleHelp()" style="font-size: 0.7rem;"></button>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.7;">
+            <p class="mb-3">
+                <strong style="color: var(--text-primary); display: block; margin-bottom: 0.3rem;">Purpose:</strong>
+                Participants added here will be automatically excluded from the "Attendance" sheet (Sheet2) in Attendance Generator processed files.
+            </p>
+            <p class="mb-3">
+                <strong style="color: var(--text-primary); display: block; margin-bottom: 0.3rem;">Raw Data:</strong>
+                They will still appear in the raw data (Sheet1) for reference.
+            </p>
+            <p class="mb-0">
+                <i class="fas fa-exclamation-triangle me-1" style="color: var(--warning-color);"></i>
+                <strong style="color: var(--text-primary);">Important:</strong> <strong>Email matching is prioritized</strong> over name matching. Use email addresses when possible, as names can vary (different spellings, nicknames, etc.) but emails are unique identifiers.
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Content: Two Columns -->
+    <div class="row g-2 flex-grow-1" style="min-height: 0; overflow: hidden; margin: 0;">
+        <!-- Left Column: Add Participants (Narrower) -->
+        <div class="col-lg-4 d-flex flex-column" style="min-height: 0;">
+            <div class="card h-100 d-flex flex-column excluded-card">
+                <div class="card-header py-1 px-2 flex-shrink-0" style="background: var(--bg-elevated); border-bottom: 1px solid var(--border-color);">
+                    <h6 class="mb-0" style="font-size: 0.8rem; color: var(--text-primary); font-weight: 600;">
+                        <i class="fas fa-plus-circle me-1" style="color: var(--primary-accent);"></i>Add Exclusions
+                    </h6>
+                </div>
+                <div class="card-body p-2 flex-grow-1" style="overflow-y: auto; min-height: 0; background: var(--bg-card);">
+                    <!-- Single Add -->
+                    <div class="mb-3">
+                        <label class="form-label mb-1 d-block" style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">
+                            Single Entry
+                        </label>
+                        <form method="POST" action="{{ url_for('add_excluded') }}">
+                            <div class="d-flex gap-1 mb-1">
+                                <select name="identifier_type" class="form-select form-select-sm" 
+                                        style="font-size: 0.7rem; width: 85px; padding: 0.25rem 0.4rem; background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-color);">
+                                    <option value="email" selected>Email</option>
+                                    <option value="name">Name</option>
+                                </select>
+                                <input type="text" name="identifier" class="form-control form-control-sm flex-grow-1" 
+                                       placeholder="Enter email or name..." required
+                                       style="font-size: 0.7rem; padding: 0.25rem 0.5rem; background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-color);">
+                                <button type="submit" class="btn btn-primary btn-sm" style="font-size: 0.7rem; padding: 0.25rem 0.6rem;">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted" style="font-size: 0.65rem; color: var(--text-tertiary);">Email recommended for accuracy</small>
+                        </form>
+                    </div>
+
+                    <hr class="my-2" style="margin: 0.5rem 0; border-color: var(--border-color);">
+
+                    <!-- Bulk Add -->
+                    <div class="mb-3">
+                        <label class="form-label mb-1 d-block" style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">
+                            Multiple Entries
+                        </label>
+                        <form method="POST" action="{{ url_for('bulk_add_excluded') }}">
+                            <select name="identifier_type" class="form-select form-select-sm mb-1" 
+                                    style="font-size: 0.7rem; width: 100px; padding: 0.25rem 0.4rem; background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-color);">
+                                <option value="email" selected>Emails</option>
+                                <option value="name">Names</option>
+                            </select>
+                            <textarea name="identifiers" class="form-control form-control-sm mb-1" rows="3" 
+                                      placeholder="user@example.com&#10;admin@example.com&#10;Or comma-separated: user1@example.com, user2@example.com"
+                                      style="font-size: 0.7rem; padding: 0.3rem 0.5rem; resize: none; background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-color);"></textarea>
+                            <button type="submit" class="btn btn-primary btn-sm w-100" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">
+                                <i class="fas fa-plus-circle me-1"></i>Add All
+                            </button>
+                        </form>
+                    </div>
+
+                    <hr class="my-2" style="margin: 0.5rem 0; border-color: var(--border-color);">
+
+                    <!-- Upload File -->
+                    <div class="mb-2">
+                        <label class="form-label mb-1 d-block" style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">
+                            Upload File
+                        </label>
+                        <form method="POST" action="{{ url_for('upload_excluded') }}" enctype="multipart/form-data">
+                            <div class="d-flex gap-1 mb-1">
+                                <select name="identifier_type" class="form-select form-select-sm" 
+                                        style="font-size: 0.7rem; width: 100px; padding: 0.25rem 0.4rem; background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-color);">
+                                    <option value="email" selected>Emails</option>
+                                    <option value="name">Names</option>
+                                </select>
+                                <input type="file" name="file" class="form-control form-control-sm flex-grow-1" 
+                                       accept=".csv,.xlsx,.xls" style="font-size: 0.7rem; padding: 0.25rem 0.4rem; background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-color);">
+                            </div>
+                            <div class="d-flex gap-1 mb-1">
+                                <a href="{{ url_for('download_excluded_template') }}" class="btn btn-outline-info btn-sm flex-grow-1" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">
+                                    <i class="fas fa-download me-1"></i>Template
+                                </a>
+                                <button type="submit" class="btn btn-success btn-sm flex-grow-1" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">
+                                    <i class="fas fa-upload me-1"></i>Upload
+                                </button>
+                            </div>
+                            <small class="text-muted d-block" style="font-size: 0.65rem; color: var(--text-tertiary); line-height: 1.3;">
+                                Download template or use first column / column named "email" or "name"
+                            </small>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Current Exclusions -->
+        <div class="col-lg-8 d-flex flex-column" style="min-height: 0;">
+            <div class="card h-100 d-flex flex-column excluded-card">
+                <div class="card-header py-1 px-2 d-flex justify-content-between align-items-center flex-shrink-0" style="background: var(--bg-elevated); border-bottom: 1px solid var(--border-color);">
+                    <h6 class="mb-0" style="font-size: 0.8rem; color: var(--text-primary); font-weight: 600;">
+                        <i class="fas fa-list me-1" style="color: var(--primary-accent);"></i>
+                        Current Exclusions 
+                        <span class="badge bg-primary ms-1" style="font-size: 0.7rem; padding: 0.2rem 0.5rem; font-weight: 600;">{{ excluded|length }} Participant{{ 's' if excluded|length != 1 else '' }}</span>
+                    </h6>
+                    {% if excluded %}
+                    <form method="POST" action="{{ url_for('clear_all_excluded') }}" 
+                          onsubmit="return confirm('Clear ALL exclusions?');" class="mb-0">
+                        <button type="submit" class="btn btn-clear-all btn-sm py-0 px-2" style="font-size: 0.65rem;">
+                            <i class="fas fa-trash me-1"></i>Clear All
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="table-container flex-grow-1" style="background: var(--bg-card);">
+                    {% if excluded %}
+                    <table class="table table-hover table-sm mb-0" style="font-size: 0.75rem;">
+                        <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 10; border-bottom: 2px solid var(--border-color);">
+                            <tr>
+                                <th style="width: 40%; padding: 0.4rem 0.5rem; font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">Identifier</th>
+                                <th style="width: 15%; padding: 0.4rem 0.5rem; font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">Type</th>
+                                <th style="width: 25%; padding: 0.4rem 0.5rem; font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">Added</th>
+                                <th class="text-end" style="width: 20%; padding: 0.4rem 0.5rem; font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in excluded %}
+                            <tr id="row-{{ item.id }}" style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.35rem 0.5rem; vertical-align: middle;">
+                                    <div id="display-{{ item.id }}">
+                                        {% if item.identifier_type == 'email' %}
+                                        <i class="fas fa-envelope me-1" style="font-size: 0.65rem; color: var(--info-color);"></i>
+                                        {% else %}
+                                        <i class="fas fa-user me-1" style="font-size: 0.65rem; color: var(--text-tertiary);"></i>
+                                        {% endif %}
+                                        <span style="font-size: 0.7rem; color: var(--text-primary);">{{ item.identifier }}</span>
+                                    </div>
+                                    <div id="edit-{{ item.id }}" style="display: none;">
+                                        <input type="text" id="edit-input-{{ item.id }}" class="edit-input" 
+                                               value="{{ item.identifier }}" 
+                                               data-original="{{ item.identifier }}"
+                                               data-type="{{ item.identifier_type }}">
+                                    </div>
+                                </td>
+                                <td style="padding: 0.35rem 0.5rem; vertical-align: middle;">
+                                    <span class="badge {% if item.identifier_type == 'email' %}bg-info{% else %}bg-secondary{% endif %}" 
+                                          style="font-size: 0.6rem; padding: 0.15rem 0.4rem;">
+                                        {{ item.identifier_type|title }}
+                                    </span>
+                                </td>
+                                <td style="padding: 0.35rem 0.5rem; vertical-align: middle;">
+                                    <small style="font-size: 0.65rem; color: var(--text-tertiary);">{{ item.created_at[:16] }}</small>
+                                </td>
+                                <td class="text-end" style="padding: 0.35rem 0.5rem; vertical-align: middle;">
+                                    <div id="actions-display-{{ item.id }}" class="d-flex gap-1 justify-content-end">
+                                        <button type="button" class="btn btn-edit-item btn-sm py-0 px-1" 
+                                                title="Edit" style="font-size: 0.65rem;" onclick="startEdit({{ item.id }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <form method="POST" action="{{ url_for('delete_excluded', participant_id=item.id) }}" 
+                                              style="display: inline;" onsubmit="return confirm('Remove this exclusion?');">
+                                            <button type="submit" class="btn btn-remove-item btn-sm py-0 px-1" 
+                                                    title="Remove" style="font-size: 0.65rem;">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <div id="actions-edit-{{ item.id }}" style="display: none;" class="d-flex gap-1 justify-content-end">
+                                        <button type="button" class="btn btn-success btn-sm py-0 px-1" 
+                                                title="Save" style="font-size: 0.65rem;" onclick="saveEdit({{ item.id }})">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-secondary btn-sm py-0 px-1" 
+                                                title="Cancel" style="font-size: 0.65rem;" onclick="cancelEdit({{ item.id }})">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-center py-4" style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <i class="fas fa-user-check fa-2x mb-2" style="color: var(--text-tertiary); opacity: 0.5;"></i>
+                        <p class="mb-1" style="font-size: 0.75rem; color: var(--text-secondary);">No participants excluded yet.</p>
+                        <p class="small mb-0" style="font-size: 0.7rem; color: var(--text-tertiary);">Add names or emails to exclude from attendance sheets.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleHelp() {
+        const popup = document.getElementById('helpPopup');
+        popup.classList.toggle('show');
+    }
+    
+    // Close popup when clicking outside or pressing Escape
+    document.addEventListener('click', function(event) {
+        const popup = document.getElementById('helpPopup');
+        const helpBtn = event.target.closest('.help-btn');
+        if (!popup.contains(event.target) && !helpBtn && popup.classList.contains('show')) {
+            popup.classList.remove('show');
+        }
+    });
+    
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const popup = document.getElementById('helpPopup');
+            if (popup.classList.contains('show')) {
+                popup.classList.remove('show');
+            }
+        }
+    });
+    
+    // Edit functionality
+    function startEdit(id) {
+        document.getElementById('display-' + id).style.display = 'none';
+        document.getElementById('edit-' + id).style.display = 'block';
+        document.getElementById('actions-display-' + id).style.display = 'none';
+        document.getElementById('actions-edit-' + id).style.display = 'flex';
+        document.getElementById('edit-input-' + id).focus();
+        document.getElementById('edit-input-' + id).select();
+    }
+    
+    function cancelEdit(id) {
+        const input = document.getElementById('edit-input-' + id);
+        input.value = input.dataset.original;
+        document.getElementById('display-' + id).style.display = 'block';
+        document.getElementById('edit-' + id).style.display = 'none';
+        document.getElementById('actions-display-' + id).style.display = 'flex';
+        document.getElementById('actions-edit-' + id).style.display = 'none';
+    }
+    
+    function saveEdit(id) {
+        const input = document.getElementById('edit-input-' + id);
+        const newValue = input.value.trim();
+        const originalValue = input.dataset.original;
+        const identifierType = input.dataset.type;
+        
+        if (!newValue) {
+            alert('Identifier cannot be empty');
+            return;
+        }
+        
+        if (newValue === originalValue) {
+            cancelEdit(id);
+            return;
+        }
+        
+        // Send update request
+        fetch(`/admin/excluded_participants/edit/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                identifier: newValue,
+                identifier_type: identifierType
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update display
+                const displayDiv = document.getElementById('display-' + id);
+                const icon = identifierType === 'email' 
+                    ? '<i class="fas fa-envelope me-1" style="font-size: 0.65rem; color: var(--info-color);"></i>'
+                    : '<i class="fas fa-user me-1" style="font-size: 0.65rem; color: var(--text-tertiary);"></i>';
+                displayDiv.innerHTML = icon + '<span style="font-size: 0.7rem; color: var(--text-primary);">' + newValue + '</span>';
+                input.dataset.original = newValue;
+                cancelEdit(id);
+            } else {
+                alert(data.message || 'Update failed');
+                cancelEdit(id);
+            }
+        })
+        .catch(err => {
+            alert('Error updating exclusion');
+            cancelEdit(id);
+        });
+    }
+    
+    // Allow Enter key to save
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && event.target.classList.contains('edit-input')) {
+            const id = event.target.id.replace('edit-input-', '');
+            saveEdit(parseInt(id));
+        }
+    });
+</script>
+{% endblock %}

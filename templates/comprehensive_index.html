@@ -4,7 +4,7 @@
 
 {% block content %}
 <!-- Hybrid Layout: Default Full View / Split Mode on Tool Click -->
-<div id="appContainer" class="app-container">
+<div id="appContainer" class="app-container" style="margin-bottom: 2rem;">
     
     <!-- DEFAULT VIEW: Full-width Tools + Key Features -->
     <div id="defaultView" class="default-view" style="padding: 0.5rem; overflow: hidden;">
@@ -26,11 +26,20 @@
         <div class="d-flex justify-content-center mb-2">
             <div class="alert alert-success d-flex align-items-center py-1 px-2" style="font-size: 0.75rem; border-radius: var(--radius-md); max-width: fit-content;">
                 <i class="fas fa-user-check me-1" style="font-size: 0.8rem;"></i>
-                <span>You are logged in as <strong>{{ session.user_id }}</strong> ({{ session.role|title }})
+                {% set first_name = session.first_name or session.user_id %}
                 {% set remaining = get_remaining_time(session.user_id) %}
-                {% if remaining and remaining != 'Permanent' %}
-                    • Expires in {{ remaining }}
-                {% endif %}
+                {% set last_activity = session.last_activity %}
+                <span>
+                    Logged in as <strong>{{ first_name }}</strong> ({{ session.role|title }})
+                    {% if remaining and remaining != 'Permanent' %}
+                        • Access expires in <strong>{{ remaining }}</strong>
+                    {% elif session.role == 'superadmin' %}
+                        • Access: Permanent
+                    {% elif last_activity %}
+                        • Last activity: <strong>{{ last_activity }}</strong>
+                    {% else %}
+                        • Access: Active (no expiry set)
+                    {% endif %}
                 </span>
             </div>
         </div>
@@ -39,14 +48,14 @@
         <!-- Main Tools Section -->
         <div class="mt-1 mb-1">
             <h2 class="text-center mb-2" style="font-size: 1.25rem; margin-top: 0.25rem;">Available Tools</h2>
-            <div class="row justify-content-center g-3" style="margin: 0 auto; max-width: 1100px;">
-                <div class="col-lg-3 col-md-4 col-sm-6">
+            <div class="row justify-content-center g-3" style="margin: 0 auto; max-width: 1400px;">
+                <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6">
                     <div class="card tool-card h-100 clickable-tool" data-tool="attendance-generator" style="cursor: pointer; min-height: 220px;">
                         <div class="card-body text-center d-flex flex-column" style="padding: 0.85rem 0.85rem 1.1rem;">
                             <div class="feature-icon mx-auto mb-2" style="width: 48px; height: 48px;">
                                 <i class="fas fa-calendar-check"></i>
                             </div>
-                            <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.5rem;">Attendance Generator</h3>
+                            <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.5rem;">{{ app_names.app1 if app_names else 'Zoom Attendance Analyzer' }}</h3>
                             <p class="card-text" style="font-size: 0.78rem; margin-bottom: 1.15rem; line-height: 1.4;">Generate attendance from Zoom logs with custom time thresholds</p>
                             <button class="btn btn-primary btn-sm w-100 mt-auto" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
                                 <i class="fas fa-cog"></i> Launch
@@ -54,30 +63,30 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-3 col-md-4 col-sm-6">
-                    <div class="card tool-card h-100 clickable-tool" data-tool="excel-extractor" style="cursor: pointer; min-height: 220px;">
-                        <div class="card-body text-center d-flex flex-column" style="padding: 0.85rem 0.85rem 1.1rem;">
-                            <div class="feature-icon mx-auto mb-2" style="width: 48px; height: 48px;">
-                                <i class="fas fa-file-excel"></i>
-                            </div>
-                            <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.5rem;">Excel Extractor</h3>
-                            <p class="card-text" style="font-size: 0.78rem; margin-bottom: 1.15rem; line-height: 1.4;">Extract and standardize attendance data from Excel files</p>
-                            <button class="btn btn-primary btn-sm w-100 mt-auto" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
-                                <i class="fas fa-table"></i> Extract
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-4 col-sm-6">
+                <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6">
                     <div class="card tool-card h-100 clickable-tool" data-tool="smart-matcher" style="cursor: pointer; min-height: 220px;">
                         <div class="card-body text-center d-flex flex-column" style="padding: 0.85rem 0.85rem 1.1rem;">
                             <div class="feature-icon mx-auto mb-2" style="width: 48px; height: 48px;">
                                 <i class="fas fa-exchange-alt"></i>
                             </div>
-                            <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.5rem;">Smart Matcher</h3>
+                            <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.5rem;">{{ app_names.app2 if app_names else 'Intelligent Record Matcher' }}</h3>
                             <p class="card-text" style="font-size: 0.78rem; margin-bottom: 1.15rem; line-height: 1.4;">Match records using fuzzy algorithms with high accuracy</p>
                             <button class="btn btn-primary btn-sm w-100 mt-auto" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
                                 <i class="fas fa-link"></i> Match
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6">
+                    <div class="card tool-card h-100 clickable-tool" data-tool="final-excel-generator" style="cursor: pointer; min-height: 220px;">
+                        <div class="card-body text-center d-flex flex-column" style="padding: 0.85rem 0.85rem 1.1rem;">
+                            <div class="feature-icon mx-auto mb-2" style="width: 48px; height: 48px;">
+                                <i class="fas fa-file-export"></i>
+                            </div>
+                            <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.5rem;">{{ app_names.app3 if app_names else 'Session Report Generator' }}</h3>
+                            <p class="card-text" style="font-size: 0.78rem; margin-bottom: 1.15rem; line-height: 1.4;">Generate individual session files from matched attendance</p>
+                            <button class="btn btn-primary btn-sm w-100 mt-auto" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+                                <i class="fas fa-file-export"></i> Generate
                             </button>
                         </div>
                     </div>
@@ -164,19 +173,7 @@
                         </div>
                         <div class="flex-grow-1">
                             <div class="tool-name">Attendance Generator</div>
-                            <div class="tool-desc">Zoom log processing</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="sidebar-tool-item" data-tool="excel-extractor">
-                    <div class="d-flex align-items-center">
-                        <div class="tool-icon-small me-2">
-                            <i class="fas fa-file-excel"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="tool-name">Excel Extractor</div>
-                            <div class="tool-desc">Data extraction</div>
+                            <div class="tool-desc">Generate detailed attendance</div>
                         </div>
                     </div>
                 </div>
@@ -189,6 +186,18 @@
                         <div class="flex-grow-1">
                             <div class="tool-name">Smart Matcher</div>
                             <div class="tool-desc">Record matching</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sidebar-tool-item" data-tool="final-excel-generator">
+                    <div class="d-flex align-items-center">
+                        <div class="tool-icon-small me-2">
+                            <i class="fas fa-file-export"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="tool-name">Final Excel Generator</div>
+                            <div class="tool-desc">Generate session files</div>
                         </div>
                     </div>
                 </div>
@@ -212,6 +221,14 @@
 </div>
 
 <script>
+// Batch data for Smart Matcher (injected from server)
+const canUseBatchMatching = {{ 'true' if (session.role == 'superadmin' or can_use_batch_matching) else 'false' }};
+const batchesData = [
+    {% for b in batches %}
+    { id: {{ b.id }}, name: "{{ b.name }}", count: {{ batch_counts.get(b.id, 0) }} }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
 // Hybrid Layout: Default View + Split Mode
 document.addEventListener('DOMContentLoaded', function() {
     const defaultView = document.getElementById('defaultView');
@@ -224,173 +241,306 @@ document.addEventListener('DOMContentLoaded', function() {
     // Tool Templates (embedded HTML for each tool)
     const toolTemplates = {
         'attendance-generator': `
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0" style="font-weight: 700;">
                     <i class="fas fa-calendar-check me-2" style="color: var(--primary-accent);"></i>
                     Attendance Generator
-                </h3>
-                <button onclick="closeSplitView()" class="btn" style="background: var(--error-color); color: white; padding: 0.6rem 1.2rem; font-weight: 600;">
-                    <i class="fas fa-times me-2"></i>Close
+                </h4>
+                <button onclick="closeSplitView()" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-times me-1"></i>Close
                 </button>
             </div>
-            <div class="card">
-                <div class="card-body p-4">
-                    <!-- Login status removed from Attendance Generator tool -->
-                    <div class="row">
-                        <div class="col-lg-6 mb-3">
-                            <h5 class="mb-3">Upload Zoom Session Logs</h5>
-                            <form method="POST" action="{{ url_for('upload_attendance_file') }}" enctype="multipart/form-data">
-                                <input type="hidden" name="mode" value="multiple">
-                                <div class="mb-3">
-                                    <label class="form-label">Select Zoom Log Files</label>
-                                    <input class="form-control" type="file" name="csv_files" accept=".csv,.xlsx" multiple {% if not session.user_id %}disabled{% endif %}>
-                                    <div class="form-text">Upload CSV or Excel format files</div>
-                                </div>
-                                <div class="alert alert-warning py-2">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <small>Human verification required for this tool</small>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100 py-2">
-                                    <i class="fas fa-upload me-2"></i>Upload and Configure
-                                </button>
-                            </form>
+            <div class="row">
+                <div class="col-lg-6 mb-3">
+                    <h6 class="mb-2">Upload Zoom Session Logs</h6>
+                    <form method="POST" action="{{ url_for('upload_attendance_file') }}" enctype="multipart/form-data">
+                        <input type="hidden" name="mode" value="multiple">
+                        <div class="mb-3">
+                            <label class="form-label small">Select Zoom Log Files</label>
+                            <input class="form-control form-control-sm" type="file" name="csv_files" accept=".csv,.xlsx" multiple {% if not session.user_id %}disabled{% endif %}>
+                            <div class="form-text small">Upload CSV or Excel format files</div>
                         </div>
-                        <div class="col-lg-6">
-                            <div class="card h-100" style="background: var(--bg-elevated);">
-                                <div class="card-body">
-                                    <h5><i class="fas fa-info-circle me-2"></i>How to Use</h5>
-                                    <p class="text-muted">Upload your Zoom attendance file and configure session settings.</p>
-                                    <h6>File Format Requirements</h6>
-                                    <ul style="font-size: 0.9rem;">
-                                        <li>Name (First Name)</li>
-                                        <li>User Name (Display Name)</li>
-                                        <li>User Email</li>
-                                        <li>Join Time & Leave Time</li>
-                                        <li>Duration (Minutes)</li>
-                                    </ul>
-                                </div>
-                            </div>
+                        <div class="alert alert-warning py-2 small">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Human verification required for this tool
                         </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="fas fa-upload me-1"></i>Upload and Configure
+                        </button>
+                    </form>
+                </div>
+                <div class="col-lg-6">
+                    <div class="p-3 rounded" style="background: var(--bg-elevated); border: 1px solid var(--border-color);">
+                        <h6><i class="fas fa-info-circle me-1"></i>How to Use</h6>
+                        <p class="text-muted small mb-2">Upload your Zoom attendance file and configure session settings.</p>
+                        <p class="small mb-1 fw-semibold">File Format Requirements:</p>
+                        <ul class="small mb-0" style="padding-left: 1.2rem;">
+                            <li>Name (First Name)</li>
+                            <li>User Name (Display Name)</li>
+                            <li>User Email</li>
+                            <li>Join Time & Leave Time</li>
+                            <li>Duration (Minutes)</li>
+                        </ul>
                     </div>
                 </div>
             </div>
         `,
-        'excel-extractor': `
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0;">
-                    <i class="fas fa-file-excel me-2" style="color: var(--success-accent);"></i>
-                    Excel Extractor
-                </h3>
-                <button onclick="closeSplitView()" class="btn" style="background: var(--error-color); color: white; padding: 0.6rem 1.2rem; font-weight: 600;">
-                    <i class="fas fa-times me-2"></i>Close
+        'final-excel-generator': `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0" style="font-weight: 700;">
+                    <i class="fas fa-file-export me-2" style="color: var(--warning-color);"></i>
+                    Final Excel Generator
+                </h4>
+                <button onclick="closeSplitView()" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-times me-1"></i>Close
                 </button>
             </div>
-            <div class="card">
-                <div class="card-body p-4">
-                    <!-- Login status removed from Excel Extractor tool -->
-                    <div class="row">
-                        <div class="col-lg-6 mb-3">
-                            <h5 class="mb-3">Upload Final Attendance Files</h5>
-                            <form method="POST" action="{{ url_for('process_raw_excel') }}" enctype="multipart/form-data">
-                                <div class="mb-3">
-                                    <label class="form-label">Select Attendance Files (.xlsx)</label>
-                                    <input class="form-control" type="file" name="excel_files" accept=".xlsx" multiple {% if not session.user_id %}disabled{% endif %}>
-                                    <div class="form-text">Upload files from Attendance Generator</div>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100 py-2">
-                                    <i class="fas fa-cogs me-2"></i>Process Files
-                                </button>
-                            </form>
+            <div class="row">
+                <div class="col-lg-6 mb-3">
+                    <h6 class="mb-2">Upload Matched Attendance Files</h6>
+                    <form method="POST" action="{{ url_for('process_final_excel') }}" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label small">Select Matched Files (.xlsx)</label>
+                            <input class="form-control form-control-sm" type="file" name="excel_files" accept=".xlsx,.xls" multiple {% if not session.user_id %}disabled{% endif %} required>
+                            <div class="form-text small">Upload files from Smart Matcher (with "Matched" sheet)</div>
                         </div>
-                        <div class="col-lg-6">
-                            <div class="card h-100" style="background: var(--bg-elevated);">
-                                <div class="card-body">
-                                    <h5><i class="fas fa-info-circle me-2"></i>How to Use</h5>
-                                    <p class="text-muted">Upload Excel file to extract and standardize attendance data.</p>
-                                    <h6>File Format Requirements</h6>
-                                    <ul style="font-size: 0.9rem;">
-                                        <li>Sheet named "Attendance"</li>
-                                        <li>Column with participant Names</li>
-                                        <li>Session columns with P/A values</li>
-                                    </ul>
-                                </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Output Format</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="output_format" id="final_xlsx" value="xlsx" checked>
+                                <label class="form-check-label" for="final_xlsx">Excel (.xlsx)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="output_format" id="final_csv" value="csv">
+                                <label class="form-check-label" for="final_csv">CSV (.csv)</label>
                             </div>
                         </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="fas fa-cogs me-1"></i>Generate Session Files
+                        </button>
+                    </form>
+                </div>
+                <div class="col-lg-6">
+                    <div class="p-3 rounded" style="background: var(--bg-elevated); border: 1px solid var(--border-color);">
+                        <h6><i class="fas fa-info-circle me-1"></i>How to Use</h6>
+                        <p class="text-muted small mb-2">Upload matched attendance files to generate individual session files.</p>
+                        <p class="small mb-1 fw-semibold">File Format Requirements:</p>
+                        <ul class="small mb-0" style="padding-left: 1.2rem;">
+                            <li>Excel file with "Matched" sheet</li>
+                            <li>Email column (email_id)</li>
+                            <li>Session columns with attendance status</li>
+                        </ul>
+                        <p class="small mt-2 mb-0 fw-semibold">Output:</p>
+                        <ul class="small mb-0" style="padding-left: 1.2rem;">
+                            <li>One file per session</li>
+                            <li>Format: email_id, attendance(absent/present/leave)</li>
+                        </ul>
                     </div>
                 </div>
             </div>
         `,
         'smart-matcher': `
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0;">
+            <style>
+                /* Smart Matcher specific styles - consistent with other tools */
+                .file-pair-row {
+                    transition: all 0.3s ease;
+                    background: var(--bg-elevated);
+                    border-left: 4px solid var(--secondary-accent) !important;
+                }
+                
+                .file-pair-row:hover {
+                    box-shadow: 0 0 15px rgba(0, 217, 255, 0.2), 0 2px 8px rgba(0,0,0,0.15);
+                    border-left-color: var(--primary-accent) !important;
+                }
+                
+                .file-name-display {
+                    min-height: 30px;
+                    display: flex;
+                    align-items: center;
+                    transition: all 0.2s ease;
+                }
+                
+                .form-label {
+                    color: var(--text-primary);
+                    font-weight: 500;
+                }
+                
+                .btn-outline-primary {
+                    border-width: 2px;
+                }
+                
+                .btn-outline-primary:hover {
+                    border-width: 2px;
+                }
+                
+                .card-body {
+                    overflow-y: hidden;
+                    padding: 0.5rem !important;
+                }
+                
+                /* Custom styles for file name display in both themes */
+                .file-name-display {
+                    min-height: 0;
+                    display: flex;
+                    align-items: center;
+                    transition: all 0.2s ease;
+                    background-color: var(--bg-elevated) !important;
+                    color: var(--success-accent) !important;
+                    border: 1px solid var(--border-color) !important;
+                    margin-top: 0.25rem;
+                }
+                
+                .card-option input:checked + label {
+                    border-color: var(--primary-color);
+                    background-color: var(--primary-color);
+                    color: white;
+                    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.25);
+                }
+
+                .card-option label:hover {
+                    border-color: var(--primary-color);
+                    transform: translateY(-1px);
+                    box-shadow: 0 0 15px rgba(0, 217, 255, 0.3);
+                }
+
+                .card-option label {
+                    transition: all 0.2s ease;
+                    cursor: pointer;
+                }
+
+                .space-y-3 > * + * {
+                    margin-top: 1rem;
+                }
+
+                .master-mode-wrapper {
+                    transition: opacity 0.3s ease, height 0.3s ease;
+                }
+                
+                /* Output format section */
+                .output-format-section {
+                    background-color: var(--bg-elevated) !important;
+                    border: 1px solid var(--border-color) !important;
+                }
+            </style>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0" style="font-weight: 700;">
                     <i class="fas fa-exchange-alt me-2" style="color: var(--secondary-accent);"></i>
                     Smart Matcher
-                </h3>
-                <button onclick="closeSplitView()" class="btn" style="background: var(--error-color); color: white; padding: 0.6rem 1.2rem; font-weight: 600;">
-                    <i class="fas fa-times me-2"></i>Close
-                </button>
+                </h4>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="document.getElementById('helpPopup').classList.toggle('d-none')" title="How to Use">
+                        <i class="fas fa-question-circle"></i>
+                    </button>
+                    <button onclick="closeSplitView()" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-times me-1"></i>Close
+                    </button>
+                </div>
             </div>
-            <div class="card">
-                <div class="card-body p-4">
-                    <!-- Login status removed from Smart Matcher tool -->
-                    <div class="row">
-                        <div class="col-lg-6 mb-3">
-                            <h5 class="mb-3">Upload Files for Matching</h5>
-                            <form method="POST" action="{{ url_for('process_attendance_matching') }}" enctype="multipart/form-data">
-                                <div class="mb-3">
-                                    <label class="form-label">Master List Files</label>
-                                    <input class="form-control" type="file" name="master_files" accept=".csv,.xlsx" multiple {% if not session.user_id %}disabled{% endif %}>
-                                    <div class="form-text">Upload master student lists</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Raw Attendance Files</label>
-                                    <input class="form-control" type="file" name="raw_files" accept=".csv,.xlsx" multiple {% if not session.user_id %}disabled{% endif %}>
-                                    <div class="form-text">Upload raw attendance files</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Output Format</label>
-                                    <div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="output_format" value="xlsx" checked>
-                                            <label class="form-check-label">Excel (.xlsx)</label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="output_format" value="csv">
-                                            <label class="form-check-label">CSV (.csv)</label>
-                                        </div>
+            
+            <!-- Help Popup -->
+            <div id="helpPopup" class="d-none position-absolute rounded shadow-lg p-3" style="right: 20px; top: 60px; z-index: 1050; max-width: 320px; background: var(--bg-card); border: 1px solid var(--border-color);">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0 fw-bold" style="color: var(--info-color);"><i class="fas fa-info-circle me-1"></i>How to Use</h6>
+                    <button type="button" class="btn-close btn-sm" onclick="document.getElementById('helpPopup').classList.add('d-none')"></button>
+                </div>
+                <div class="small" style="color: var(--text-primary);">
+                    <p class="mb-2"><strong><i class="fas fa-file-upload me-1" style="color: var(--primary-accent);"></i>File Upload:</strong> Upload master (student list) and raw (attendance) files in CSV/Excel format.</p>
+                    <p class="mb-2"><strong><i class="fas fa-database me-1" style="color: var(--success-color);"></i>Batch Mode:</strong> Select a predefined batch instead of uploading master file (if permitted).</p>
+                    <p class="mb-0"><strong><i class="fas fa-download me-1" style="color: var(--warning-color);"></i>Results:</strong> Download matched results with confidence scores and unmatched items.</p>
+                </div>
+            </div>
+            
+            <form id="splitViewMatchingForm" method="POST" action="/process_attendance_matching" enctype="multipart/form-data">
+                <input type="hidden" id="split_pair_count" name="pair_count" value="1">
+                
+                <!-- File Pairs Header -->
+                <div class="d-flex align-items-center justify-content-between mb-1 px-1">
+                    <span class="fw-semibold small" style="color: var(--text-secondary);">
+                        <i class="fas fa-layer-group me-1"></i>File Pairs
+                    </span>
+                    <button type="button" id="split-add-pair-btn" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-plus me-1"></i>Add Pair
+                    </button>
+                </div>
+                
+                <!-- File Pairs Container - Expands to show all pairs -->
+                <div id="split-file-pairs-container" style="overflow-y: auto; margin-bottom: 0.5rem;">
+                    <!-- Initial File Pair -->
+                    <div class="file-pair-row card border mb-1" data-pair-index="0" data-status="incomplete" style="border-radius: 6px !important;">
+                        <div class="card-header pair-header py-1 px-2 d-flex align-items-center justify-content-between" style="cursor: pointer; min-height: 28px;" onclick="togglePairCollapse(this);">
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="badge bg-primary rounded-pill" style="font-size: 0.6rem; padding: 2px 6px;">1</span>
+                                <span class="fw-semibold pair-title" style="font-size: 0.7rem;">Pair</span>
+                                <span class="pair-status-text text-muted" style="font-size: 0.65rem;"></span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="pair-status-icon"></span>
+                                <i class="fas fa-chevron-up collapse-icon text-muted" style="font-size: 0.6rem;"></i>
+                            </div>
+                        </div>
+                        <div class="card-body p-1 pair-body">
+                            <div class="d-flex gap-2">
+                                <div style="flex: 1; min-width: 0;">
+                                    <label class="form-label mb-0" style="font-size: 0.65rem; font-weight: 600;">
+                                        <i class="fas fa-file-alt text-primary me-1"></i>Master
+                                    </label>
+                                    <div id="master-source-selector-0"></div>
+                                    <div class="master-file-wrapper" id="master-file-wrapper-0" style="display: none;">
+                                        <input class="form-control form-control-sm master-input" type="file" name="master_file_0" accept=".csv,.xlsx" style="font-size: 0.65rem; padding: 2px 4px; height: 26px;" disabled onchange="updatePairStatus(0);">
+                                    </div>
+                                    <div class="master-batch-wrapper" id="master-batch-wrapper-0">
+                                        <select class="form-select form-select-sm" name="batch_id_0" id="batch_id_0" style="font-size: 0.65rem; padding: 2px 4px; height: 26px;" onchange="updatePairStatus(0);"></select>
                                     </div>
                                 </div>
-                                <div class="alert alert-warning py-2">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <small>Human verification required</small>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100 py-2">
-                                    <i class="fas fa-exchange-alt me-2"></i>Match and Process
-                                </button>
-                            </form>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="card h-100" style="background: var(--bg-elevated);">
-                                <div class="card-body">
-                                    <h5><i class="fas fa-info-circle me-2"></i>How to Use</h5>
-                                    <p class="text-muted">Match attendance records using intelligent fuzzy matching.</p>
-                                    <h6>File Requirements</h6>
-                                    <p style="font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>Master List:</strong></p>
-                                    <ul style="font-size: 0.85rem; margin-bottom: 1rem;">
-                                        <li>Column A: Email</li>
-                                        <li>Column B: Participant Name</li>
-                                    </ul>
-                                    <p style="font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>Raw Attendance:</strong></p>
-                                    <ul style="font-size: 0.85rem;">
-                                        <li>Name column</li>
-                                        <li>Session columns with P/A values</li>
-                                    </ul>
+                                <div style="flex: 1; min-width: 0;">
+                                    <label class="form-label mb-0" style="font-size: 0.65rem; font-weight: 600;">
+                                        <i class="fas fa-file-import text-success me-1"></i>Raw
+                                    </label>
+                                    <div id="raw-spacer-0"></div>
+                                    <input class="form-control form-control-sm raw-input" type="file" name="raw_file_0" accept=".csv,.xlsx" required style="font-size: 0.65rem; padding: 2px 4px; height: 26px;" onchange="updatePairStatus(0);">
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+                
+                <!-- Auto-Extract Option -->
+                <div class="alert alert-info py-1 px-2 mb-2" style="font-size: 0.7rem; background: rgba(0, 217, 255, 0.1); border: 1px solid rgba(0, 217, 255, 0.3);">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" name="auto_extract" id="autoExtract" value="1" checked style="transform: scale(0.9);">
+                        <label class="form-check-label" for="autoExtract" style="font-size: 0.72rem;">
+                            <i class="fas fa-magic me-1" style="color: var(--primary-accent);"></i>
+                            <strong>Auto-Extract:</strong> Upload Attendance Generator output directly as Raw file (extracts attendance data automatically)
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Bottom Section: Output + Submit -->
+                <div class="d-flex align-items-center justify-content-between gap-2 pt-2" style="border-top: 1px solid var(--border-color);">
+                    <div class="d-flex align-items-center gap-2 small" style="color: var(--text-secondary);">
+                        <span style="font-size: 0.75rem;"><i class="fas fa-cog me-1"></i>Output:</span>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="radio" name="output_format" id="xlsxFormat" value="xlsx" checked style="transform: scale(0.85);">
+                            <label class="form-check-label" for="xlsxFormat" style="font-size: 0.75rem;">Excel</label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="radio" name="output_format" id="csvFormat" value="csv" style="transform: scale(0.85);">
+                            <label class="form-check-label" for="csvFormat" style="font-size: 0.75rem;">CSV</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm" id="submitBtn">
+                        <i class="fas fa-play me-1"></i>Start Matching
+                    </button>
+                </div>
+                
+                <!-- Processing Status -->
+                <div id="matching-results" class="mt-2" style="display: none;">
+                    <div class="alert alert-info py-1 px-2 d-flex align-items-center mb-0" style="font-size: 0.75rem;">
+                        <div class="spinner-border spinner-border-sm me-2" role="status" style="width: 14px; height: 14px;"></div>
+                        <span><strong>Processing...</strong></span>
+                    </div>
+                </div>
+            </form>
         `
     };
     
@@ -479,6 +629,189 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     }
     
+    // Function to toggle pair collapse
+    function togglePairCollapse(header) {
+        const body = header.nextElementSibling;
+        const icon = header.querySelector('.collapse-icon');
+        body.classList.toggle('d-none');
+        icon.classList.toggle('fa-chevron-down');
+        icon.classList.toggle('fa-chevron-up');
+    }
+    window.togglePairCollapse = togglePairCollapse;
+    
+    // Function to update pair status (complete/incomplete)
+    function updatePairStatus(pairIndex) {
+        const pairRow = document.querySelector('[data-pair-index="' + pairIndex + '"]');
+        if (!pairRow) return;
+        
+        const header = pairRow.querySelector('.pair-header');
+        const statusText = pairRow.querySelector('.pair-status-text');
+        const statusIcon = pairRow.querySelector('.pair-status-icon');
+        
+        // Check master source
+        const sourceSelect = pairRow.querySelector('.master-source-select');
+        const masterInput = pairRow.querySelector('.master-input');
+        const batchSelect = pairRow.querySelector('[name^="batch_id_"]');
+        const rawInput = pairRow.querySelector('.raw-input');
+        
+        let masterName = '';
+        let hasMaster = false;
+        let hasRaw = rawInput && rawInput.files && rawInput.files.length > 0;
+        
+        if (sourceSelect && sourceSelect.value === 'batch') {
+            // Batch mode
+            if (batchSelect && batchSelect.value) {
+                hasMaster = true;
+                masterName = batchSelect.options[batchSelect.selectedIndex].text.split(' (')[0];
+            }
+        } else {
+            // File mode
+            if (masterInput && masterInput.files && masterInput.files.length > 0) {
+                hasMaster = true;
+                masterName = masterInput.files[0].name.substring(0, 20) + (masterInput.files[0].name.length > 20 ? '...' : '');
+            }
+        }
+        
+        let rawName = '';
+        if (hasRaw) {
+            rawName = rawInput.files[0].name.substring(0, 15) + (rawInput.files[0].name.length > 15 ? '...' : '');
+        }
+        
+        // Update status
+        if (hasMaster && hasRaw) {
+            pairRow.setAttribute('data-status', 'complete');
+            header.style.background = 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)';
+            header.style.borderLeft = '3px solid #28a745';
+            statusText.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>' + masterName;
+            statusIcon.innerHTML = '';
+        } else if (hasMaster || hasRaw) {
+            pairRow.setAttribute('data-status', 'partial');
+            header.style.background = 'linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%)';
+            header.style.borderLeft = '3px solid #ffc107';
+            statusText.innerHTML = hasMaster ? masterName : (hasRaw ? rawName : '');
+            statusIcon.innerHTML = '<i class="fas fa-exclamation-triangle text-warning" style="font-size: 0.7rem;" title="Missing ' + (hasMaster ? 'raw file' : 'master') + '"></i>';
+        } else {
+            pairRow.setAttribute('data-status', 'incomplete');
+            header.style.background = '';
+            header.style.borderLeft = '';
+            statusText.innerHTML = '';
+            statusIcon.innerHTML = '';
+        }
+    }
+    window.updatePairStatus = updatePairStatus;
+    
+    // Function to toggle between file upload and batch selection
+    function toggleMasterInput(pairIndex, sourceType) {
+        const pairRow = document.querySelector('[data-pair-index="' + pairIndex + '"]');
+        if (!pairRow) {
+            console.log('[toggleMasterInput] Pair row not found for index:', pairIndex);
+            return;
+        }
+        
+        const fileWrapper = pairRow.querySelector('.master-file-wrapper');
+        const batchWrapper = pairRow.querySelector('.master-batch-wrapper');
+        const masterInput = pairRow.querySelector('.master-input');
+        
+        console.log('[toggleMasterInput] pairIndex=' + pairIndex + ', sourceType=' + sourceType);
+        
+        if (sourceType === 'batch') {
+            // Hide file input, show batch select
+            if (fileWrapper) {
+                fileWrapper.style.display = 'none';
+                fileWrapper.classList.add('d-none');
+            }
+            if (batchWrapper) {
+                batchWrapper.style.display = 'block';
+                batchWrapper.classList.remove('d-none');
+            }
+            if (masterInput) {
+                masterInput.removeAttribute('required');
+                masterInput.disabled = true; // DISABLE to prevent browser validation
+                masterInput.value = ''; // Clear any selected file
+            }
+        } else {
+            // Show file input, hide batch select
+            if (fileWrapper) {
+                fileWrapper.style.display = 'block';
+                fileWrapper.classList.remove('d-none');
+            }
+            if (batchWrapper) {
+                batchWrapper.style.display = 'none';
+                batchWrapper.classList.add('d-none');
+            }
+            if (masterInput) {
+                masterInput.disabled = false; // Re-enable for file mode
+            }
+        }
+        
+        // Update status after source change
+        updatePairStatus(pairIndex);
+    }
+    
+    // Function to initialize batch selection for a pair (only for permitted users)
+    function initializeBatchSelection(pairIndex) {
+        const selectorContainer = document.getElementById('master-source-selector-' + pairIndex);
+        const batchSelect = document.getElementById('batch_id_' + pairIndex);
+        const spacer = document.getElementById('raw-spacer-' + pairIndex);
+        const fileWrapper = document.getElementById('master-file-wrapper-' + pairIndex);
+        const batchWrapper = document.getElementById('master-batch-wrapper-' + pairIndex);
+        const pairRow = document.querySelector('[data-pair-index="' + pairIndex + '"]');
+        const masterInput = pairRow ? pairRow.querySelector('.master-input') : null;
+        
+        console.log('[initializeBatchSelection] pairIndex=' + pairIndex + ', canUseBatch=' + canUseBatchMatching + ', batches=' + batchesData.length);
+        
+        // Only show batch option if user has permission
+        if (selectorContainer && canUseBatchMatching && batchesData.length > 0) {
+            // Add source selector dropdown with compact styling - default to "Use Batch"
+            selectorContainer.innerHTML = '<select class="form-select form-select-sm master-source-select mb-1" name="master_source_' + pairIndex + '" onchange="toggleMasterInput(' + pairIndex + ', this.value)" style="font-size: 0.75rem;"><option value="file">Upload File</option><option value="batch" selected>Use Batch</option></select>';
+            
+            // Add spacer for alignment
+            if (spacer) {
+                spacer.innerHTML = '<div style="height: 31px;"></div>';
+            }
+            
+            // Populate batch dropdown
+            if (batchSelect) {
+                let optionsHtml = '<option value="">Choose a batch...</option>';
+                batchesData.forEach(function(batch) {
+                    optionsHtml += '<option value="' + batch.id + '">' + batch.name + ' (' + batch.count + ' students)</option>';
+                });
+                batchSelect.innerHTML = optionsHtml;
+            }
+            
+            // Default to batch mode: hide file input, show batch select
+            if (fileWrapper) {
+                fileWrapper.style.display = 'none';
+                fileWrapper.classList.add('d-none');
+            }
+            if (batchWrapper) {
+                batchWrapper.style.display = 'block';
+                batchWrapper.classList.remove('d-none');
+            }
+            // DISABLE the master input to prevent browser validation errors
+            if (masterInput) {
+                masterInput.disabled = true;
+                masterInput.removeAttribute('required');
+            }
+        } else {
+            // No batch permission: show file input, hide batch select
+            if (fileWrapper) {
+                fileWrapper.style.display = 'block';
+                fileWrapper.classList.remove('d-none');
+            }
+            if (batchWrapper) {
+                batchWrapper.style.display = 'none';
+                batchWrapper.classList.add('d-none');
+            }
+            if (masterInput) {
+                masterInput.disabled = false;
+            }
+        }
+    }
+    
+    // Make toggleMasterInput available globally
+    window.toggleMasterInput = toggleMasterInput;
+    
     // Load tool into panel
     function loadTool(toolId) {
         toolPanel.innerHTML = toolTemplates[toolId] || '<p>Tool content not found</p>';
@@ -491,6 +824,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 item.classList.remove('active');
             }
         });
+        
+        // Initialize file pairing functionality for smart matcher
+        if (toolId === 'smart-matcher') {
+            // Set reload time for debug alert
+            const reloadTimeEl = document.getElementById('reload-time');
+            if (reloadTimeEl) {
+                reloadTimeEl.textContent = new Date().toLocaleTimeString();
+            }
+            
+            // Initialize batch selection if available
+            if (canUseBatchMatching && batchesData.length > 0) {
+                initializeBatchSelection(0);
+            }
+            
+            // Initialize the Smart Matcher functionality
+            initializeSmartMatcher('splitViewMatchingForm', 'split-add-pair-btn', 'split-file-pairs-container', 'split_pair_count', true);
+        }
+        
+        // Initialize Final Excel Generator if needed
+        if (toolId === 'final-excel-generator') {
+            // Any initialization needed
+        }
         
         // Scroll to top
         toolPanel.scrollTop = 0;
@@ -505,6 +860,8 @@ document.addEventListener('DOMContentLoaded', function() {
             toolPanel.style.opacity = '1';
         }, 200);
     }
+    
+    // Handle Smart Matcher form submission (handled by external smart-matcher.js)
     
     // Close split view and return to default
     window.closeSplitView = function() {
@@ -521,6 +878,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 50);
         }, 300);
     };
+
+
 });
 </script>
 {% endblock %}

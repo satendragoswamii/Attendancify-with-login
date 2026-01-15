@@ -1,112 +1,190 @@
 {% extends "base_comprehensive.html" %}
 
-{% block title %}Attendance Matching - Attendancify{% endblock %}
+{% block title %}{{ app_names.app2 if app_names else 'Intelligent Record Matcher' }} - Attendancify{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-2 tool-page-container" style="height: 100%; overflow-y: auto;">
+<style>
+    /* Attendance Matching specific styles */
+    .file-pair-row {
+        transition: all 0.3s ease;
+        background: var(--bg-elevated);
+        border-left: 4px solid var(--primary-accent) !important;
+    }
+    
+    .file-pair-row:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .file-name-display {
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        transition: all 0.2s ease;
+        background-color: var(--bg-elevated) !important;
+        color: var(--success-accent) !important;
+        border: 1px solid var(--border-color) !important;
+        margin-top: 0.25rem;
+    }
+    
+    .file-name-display:not(:empty) {
+        min-height: 30px;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .form-label {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+    
+    .btn-outline-primary {
+        border-width: 2px;
+    }
+    
+    .btn-outline-primary:hover {
+        border-width: 2px;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 991px) {
+        .tool-page-container {
+            padding: 0.25rem;
+        }
+    }
+</style>
+
+<div class="container-fluid py-2 tool-page-container" style="height: 100%; overflow-y: hidden;">
     <div class="row justify-content-center">
         <div class="col-xxl-10 col-xl-11 col-lg-12">
             <div class="card tool-card">
                 <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
-                    <h3 class="mb-0 fs-5"><i class="fas fa-exchange-alt me-2"></i>Attendance Matching</h3>
+                    <h3 class="mb-0 fs-5"><i class="fas fa-exchange-alt me-2"></i>{{ app_names.app2 if app_names else 'Intelligent Record Matcher' }}</h3>
                     <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-secondary py-1 px-2">
                         <i class="fas fa-arrow-left me-1"></i>Back to Home
                     </a>
                 </div>
-                <div class="card-body p-3">
-                    {% if not session.user_id %}
-                    <div class="alert alert-info d-flex align-items-center justify-content-between py-2 px-3 mb-3">
-                        <div>
-                            <i class="fas fa-info-circle me-2"></i>
-                            <span class="small">Demo mode. File processing requires login.</span>
-                        </div>
-                        <button class="btn btn-sm btn-outline-light ms-2 py-1 px-2" data-bs-toggle="modal" data-bs-target="#loginModal">
-                            <i class="fas fa-sign-in-alt me-1"></i>Login
-                        </button>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-success d-flex align-items-center py-2 px-3 mb-3">
-                        <div>
-                            <i class="fas fa-user-check me-2"></i>
-                            <span class="small">You are logged in as <strong>{{ session.user_id }}</strong> ({{ session.role|title }})
-                            {% set remaining = get_remaining_time(session.user_id) %}
-                            {% if remaining and remaining != 'Permanent' %}
-                                - Access expires in: <strong>{{ remaining }}</strong>
-                            {% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    {% endif %}
+                <div class="card-body p-1">
+                    {% include 'partials/_login_status.html' %}
                     
                     <div class="row">
-                        <div class="col-lg-6 mb-3 mb-lg-0">
-                            <h5 class="mb-2 fs-6">Upload Files for Matching</h5>
-                            <form id="matchingForm" method="POST" action="{{ url_for('process_attendance_matching') }}" enctype="multipart/form-data" data-logged-in="{% if session.user_id %}true{% else %}false{% endif %}">
-                                <div class="mb-2">
-                                    <label for="master_files" class="form-label small">Master List Files (.csv/.xlsx)</label>
-                                    <input class="form-control form-control-sm" type="file" id="master_files" name="master_files" accept=".csv,.xlsx" multiple {% if not session.user_id %}disabled{% endif %}>
-                                    <div class="form-text small">Upload master student lists</div>
-                                </div>
-                                
-                                <div class="mb-2">
-                                    <label for="raw_files" class="form-label small">Raw Attendance Files (.csv/.xlsx)</label>
-                                    <input class="form-control form-control-sm" type="file" id="raw_files" name="raw_files" accept=".csv,.xlsx" multiple {% if not session.user_id %}disabled{% endif %}>
-                                    <div class="form-text small">Upload raw attendance files</div>
-                                </div>
-                                
-                                <div class="mb-2">
-                                    <label class="form-label small">Output Format</label>
-                                    <div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="output_format" id="xlsxFormat" value="xlsx" checked>
-                                            <label class="form-check-label" for="xlsxFormat">Excel (.xlsx)</label>
+                        <div class="col-lg-6 mb-2 mb-lg-0 pe-lg-3">
+                            <h5 class="mb-3">Upload Files for Matching</h5>
+                            <p class="small text-muted mb-3">Match your attendance raw files against a master student list or a predefined batch.</p>
+
+                            <!-- TEMPLATE RELOAD TEST: timestamp -->
+                            <div class="alert alert-warning small">
+                                <strong>TEMPLATE RELOAD TEST:</strong> If you see this, the template reloaded at <span id="reload-time"></span>
+                            </div>
+
+                            <!-- DEBUG: show session and flag values -->
+                            <div class="alert alert-secondary small">
+                                <strong>DEBUG:</strong> session.role = {{ session.role|default('None') }} | can_use_batch_matching = {{ can_use_batch_matching|default('None') }}
+                            </div>
+                            
+                            <div class="mb-2">
+                                <h6 class="mb-1 text-primary">File Pair Management</h6>
+                                <form id="matchingForm" method="POST" action="{{ url_for('process_attendance_matching') }}" enctype="multipart/form-data">
+
+                                    {% if session.role == 'superadmin' or can_use_batch_matching %}
+                                    <!-- Match mode selector -->
+                                    <div class="mb-2 p-2 border rounded bg-light">
+                                        <label class="form-label small fw-semibold mb-1">Match Mode</label>
+                                        <div class="d-flex flex-wrap gap-3 align-items-center">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="match_mode" id="match_mode_file" value="file" checked>
+                                                <label class="form-check-label small" for="match_mode_file">
+                                                    <i class="fas fa-file me-1"></i>Upload master file per pair
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="match_mode" id="match_mode_batch" value="batch">
+                                                <label class="form-check-label small" for="match_mode_batch">
+                                                    <i class="fas fa-users me-1"></i>Use saved batch (single batch + multiple raw files)
+                                                </label>
+                                            </div>
+                                            <div class="flex-grow-1 batch-select-wrapper d-none">
+                                                <select class="form-select form-select-sm" name="batch_id" id="batch_id">
+                                                    <option value="">Select batch...</option>
+                                                    {% for b in batches %}
+                                                    <option value="{{ b.id }}">{{ b.name }} ({{ batch_counts.get(b.id, 0) }} students)</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="output_format" id="csvFormat" value="csv">
-                                            <label class="form-check-label" for="csvFormat">CSV (.csv)</label>
+                                        <p class="small text-muted mt-1 mb-0">Batch mode: one selected batch is matched against each uploaded raw file.</p>
+                                    </div>
+                                    {% endif %}
+
+                                    <input type="hidden" id="pair_count" name="pair_count" value="1">
+                                    <div id="file-pairs-container">
+                                        <!-- Initial File Pair -->
+                                        <div class="file-pair-row border rounded p-0 mb-1 shadow-sm" data-pair-index="0">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <h6 class="mb-0 fs-6 fw-bold text-secondary">File Pair #1</h6>
+                                                <span class="badge bg-primary">Current</span>
+                                            </div>
+                                            <div class="row g-0">
+                                                <div class="col-md-12 mb-1 master-mode-wrapper">
+                                                    <label class="form-label small fw-semibold mb-1">Master File</label>
+                                                    <input class="form-control form-control-sm master-input" type="file" name="master_file_0" accept=".csv,.xlsx" required {% if not session.user_id %}disabled{% endif %}>
+                                                    <div class="file-name-display small text-success fw-bold p-0 rounded" id="master_file_name_0"></div>
+                                                </div>
+                                                <div class="col-md-12 mb-1">
+                                                    <label class="form-label small fw-semibold mb-1">Raw File</label>
+                                                    <input class="form-control form-control-sm" type="file" name="raw_file_0" accept=".csv,.xlsx" required {% if not session.user_id %}disabled{% endif %}>
+                                                    <div class="file-name-display small text-success fw-bold p-0 rounded" id="raw_file_name_0"></div>
+                                                </div>
+                                            </div>
+                                            <div class="text-end mt-1">
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-pair-btn py-1 px-2" disabled>
+                                                    <i class="fas fa-trash-alt me-1"></i>Remove Pair
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <div class="alert alert-warning compact d-flex align-items-center py-1 px-2 mb-2">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    <span class="small">Human verification required for this tool</span>
-                                </div>
-                                
-                                <button type="submit" class="btn btn-primary w-100 btn-sm py-2" id="submitBtn">
-                                    <i class="fas fa-exchange-alt me-2"></i>Match and Process
-                                </button>
-                            </form>
+                                    
+                                    <div class="mb-3 text-center">
+                                        <hr class="my-3">
+                                        <button type="button" id="add-pair-btn" class="btn btn-sm btn-outline-primary w-100 py-2">
+                                            <i class="fas fa-plus-circle me-2"></i>Add Another File Pair
+                                        </button>
+                                        <hr class="my-3">
+                                    </div>
+                                    
+                                    <div class="mb-3 p-2 output-format-section rounded">
+                                        <label class="form-label small fw-semibold mb-1">Output Format</label>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="output_format" id="xlsxFormat" value="xlsx" checked>
+                                                <label class="form-check-label small" for="xlsxFormat">Excel (.xlsx)</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="output_format" id="csvFormat" value="csv">
+                                                <label class="form-check-label small" for="csvFormat">CSV (.csv)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-warning compact d-flex align-items-center py-1 px-2 mb-2">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        <span class="small">Human verification required for this tool</span>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary w-100 btn-sm py-2" id="submitBtn" {% if not session.user_id %}disabled{% endif %}>
+                                        <i class="fas fa-exchange-alt me-2"></i>Match Files
+                                    </button>
+                                    <!-- Results section -->
+                                    <div id="matching-results" class="mt-3" style="display: none;">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>
+                                            <span id="processing-message">Processing files...</span>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                         
-                        <div class="col-lg-6">
-                            <div class="card h-100">
-                                <div class="card-body p-2">
-                                    <h5 class="card-title fs-6"><i class="fas fa-info-circle me-2"></i>How to Use</h5>
-                                    <p class="small text-muted mb-2"><strong>How to Use:</strong> Upload two attendance files to match records using intelligent name matching.</p>
-                                    
-                                    <h6 class="mb-1 small">File Format Requirements</h6>
-                                    <p class="small mb-1"><strong>Master List Format (Excel .xlsx):</strong></p>
-                                    <ul class="small mb-1" style="font-size: 0.7rem; line-height: 1.2;">
-                                        <li><strong>Column A:</strong> Email</li>
-                                        <li><strong>Column B:</strong> Participant Name</li>
-                                        <li>Additional columns (Student ID, etc.)</li>
-                                    </ul>
-                                    
-                                    <p class="small mb-1"><strong>Raw Attendance Format (CSV/Excel):</strong></p>
-                                    <ul class="small mb-1" style="font-size: 0.7rem; line-height: 1.2;">
-                                        <li><strong>Name</strong> column</li>
-                                        <li><strong>Session</strong> columns with P/A values</li>
-                                    </ul>
-                                    
-                                    <p class="small mb-1"><strong>Generated File Structure:</strong></p>
-                                    <ul class="small mb-0" style="font-size: 0.7rem; line-height: 1.2;">
-                                        <li><strong>Matched Sheet:</strong> Successfully matched records</li>
-                                        <li><strong>Unmatched Raw Sheet:</strong> Records requiring manual matching</li>
-                                        <li><strong>Summary Sheet:</strong> Template for uploading records to server</li>
-                                    </ul>
-                                </div>
-                            </div>
+                        <div class="col-lg-6 ps-lg-3">
+                            {% include 'partials/_how_to_use_matching.html' %}
                         </div>
                     </div>
                 </div>
@@ -116,33 +194,11 @@
 </div>
 
 <script>
+// Handle Smart Matcher form submission (handled by external smart-matcher.js)
+
 document.addEventListener('DOMContentLoaded', function() {
-    const matchingForm = document.getElementById('matchingForm');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    // Check if user is logged in from data attribute
-    const isLoggedIn = matchingForm.getAttribute('data-logged-in') === 'true';
-    
-    // Form submission protection for non-logged-in users
-    if (matchingForm && !isLoggedIn) {
-        matchingForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            // Show login modal
-            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            loginModal.show();
-            return false;
-        });
-    }
-    
-    // Also add click event to submit button for extra protection
-    if (submitBtn && !isLoggedIn) {
-        submitBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            loginModal.show();
-            return false;
-        });
-    }
+    // Initialize the Smart Matcher functionality
+    initializeSmartMatcher('matchingForm', 'add-pair-btn', 'file-pairs-container', 'pair_count');
 });
 </script>
 {% endblock %}

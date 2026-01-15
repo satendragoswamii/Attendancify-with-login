@@ -1,0 +1,533 @@
+{% extends "base_comprehensive.html" %}
+{% block title %}Settings Management - Attendancify{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h2 class="mb-0"><i class="fas fa-cog me-2"></i>Settings Management</h2>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+            <p class="text-muted mt-2 mb-0">
+                <i class="fas fa-info-circle me-1"></i>
+                Configure application settings, app names, and output file formats
+            </p>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="app-names-tab" data-bs-toggle="tab" data-bs-target="#app-names" type="button" role="tab">
+                <i class="fas fa-tags me-1"></i> App Names
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="output-formats-tab" data-bs-toggle="tab" data-bs-target="#output-formats" type="button" role="tab">
+                <i class="fas fa-file-export me-1"></i> Output Formats (Per App)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="role-formats-tab" data-bs-toggle="tab" data-bs-target="#role-formats" type="button" role="tab">
+                <i class="fas fa-user-cog me-1"></i> Advanced: Role Formats
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="system-settings-tab" data-bs-toggle="tab" data-bs-target="#system-settings" type="button" role="tab">
+                <i class="fas fa-sliders-h me-1"></i> Advanced: System Settings
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="settingsTabContent">
+        
+        <!-- Tab 1: App Names -->
+        <div class="tab-pane fade show active" id="app-names" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Application Names</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Customize the display names for each application. These names appear on tiles, page titles, and in generated filenames.
+                    </p>
+                    
+                    {% set app_names_list = [
+                        ('app1_name', 'App 1: Zoom Attendance Analyzer', 'Main attendance generation app'),
+                        ('app2_name', 'App 2: Intelligent Record Matcher', 'Record matching app'),
+                        ('app3_name', 'App 3: Session Report Generator', 'Individual session file generator')
+                    ] %}
+                    
+                    {% for key, label, desc in app_names_list %}
+                        {% set current_value = '' %}
+                        {% for setting in app_settings %}
+                            {% if setting.setting_key == key %}
+                                {% set current_value = setting.setting_value %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-md-3">
+                                <label class="form-label mb-0"><strong>{{ label }}</strong></label>
+                                <small class="d-block text-muted">{{ desc }}</small>
+                            </div>
+                            <div class="col-md-7">
+                                <form method="POST" action="{{ url_for('update_settings') }}" class="d-flex gap-2">
+                                    <input type="hidden" name="setting_key" value="{{ key }}">
+                                    <input type="text" name="setting_value" class="form-control" value="{{ current_value }}" placeholder="Enter app name" required>
+                                    <button type="submit" class="btn btn-primary" style="white-space: nowrap;">
+                                        <i class="fas fa-save me-1"></i>Update
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <hr>
+                    {% endfor %}
+                    
+                    <div class="alert alert-success mb-0 mt-4">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        <strong>Tip:</strong> After changing app names, they will appear on the homepage tiles, page headers, and in generated file names (e.g., "YourAppName_2024-01-14_143022.xlsx")
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: App-Specific Output Formats -->
+        <div class="tab-pane fade" id="output-formats" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-export me-2"></i>Output Format Settings (Per App)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Configure output file format, headers, and settings for each app separately. Generated files will use these settings.
+                    </p>
+                    <div class="accordion" id="appFormatAccordion">
+                        {% if app_output_formats %}
+                            {% for format in app_output_formats %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="appHeading{{ loop.index }}">
+                                    <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#appCollapse{{ loop.index }}" aria-expanded="{% if loop.first %}true{% else %}false{% endif %}" aria-controls="appCollapse{{ loop.index }}">
+                                        <i class="fas fa-cog me-2"></i>
+                                        <strong>{{ app_names[format.app_name] if app_names else format.app_name | upper }}</strong>
+                                        &nbsp;-&nbsp;Format: {{ format.file_format | upper }}, 
+                                        Header: {% if format.include_header %}✓ Yes{% else %}✗ No{% endif %}
+                                    </button>
+                                </h2>
+                                <div id="appCollapse{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" aria-labelledby="appHeading{{ loop.index }}" data-bs-parent="#appFormatAccordion">
+                                    <div class="accordion-body">
+                                        <form method="POST" action="{{ url_for('update_app_format') }}">
+                                            <input type="hidden" name="app_name" value="{{ format.app_name }}">
+                                            
+                                            <h6 class="text-primary mb-3"><i class="fas fa-file me-1"></i> File Settings</h6>
+                                            <div class="row g-3 mb-4">
+                                                <div class="col-md-4">
+                                                    <label class="form-label"><strong>File Format</strong></label>
+                                                    <select name="file_format" class="form-select">
+                                                        <option value="xlsx" {% if format.file_format == 'xlsx' %}selected{% endif %}>📊 Excel (XLSX)</option>
+                                                        <option value="csv" {% if format.file_format == 'csv' %}selected{% endif %}>📄 CSV</option>
+                                                        <option value="xls" {% if format.file_format == 'xls' %}selected{% endif %}>📊 Excel (XLS)</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="col-md-4">
+                                                    <label class="form-label"><strong>Date Format</strong></label>
+                                                    <input type="text" name="date_format" class="form-control" value="{{ format.date_format }}" placeholder="%Y-%m-%d">
+                                                    <small class="text-muted">e.g., %Y-%m-%d → 2024-01-14</small>
+                                                </div>
+                                                
+                                                <div class="col-md-4">
+                                                    <label class="form-label"><strong>Time Format</strong></label>
+                                                    <input type="text" name="time_format" class="form-control" value="{{ format.time_format }}" placeholder="%H:%M:%S">
+                                                    <small class="text-muted">e.g., %H:%M:%S → 14:30:45</small>
+                                                </div>
+                                            </div>
+                                            
+                                            <h6 class="text-primary mb-3"><i class="fas fa-heading me-1"></i> Header Settings</h6>
+                                            <div class="row g-3 mb-4">
+                                                <div class="col-md-6">
+                                                    <label class="form-label"><strong>Header Title</strong></label>
+                                                    <input type="text" name="header_title" class="form-control" value="{{ format.header_title or '' }}" placeholder="e.g., Attendance Report">
+                                                    <small class="text-muted">Main title shown in file header</small>
+                                                </div>
+                                                
+                                                <div class="col-md-6">
+                                                    <label class="form-label"><strong>Header Subtitle</strong></label>
+                                                    <input type="text" name="header_subtitle" class="form-control" value="{{ format.header_subtitle or '' }}" placeholder="e.g., Spring 2024">
+                                                    <small class="text-muted">Subtitle shown below title</small>
+                                                </div>
+                                            </div>
+                                            
+                                            <h6 class="text-primary mb-3"><i class="fas fa-toggle-on me-1"></i> Display Options</h6>
+                                            <div class="row g-3 mb-4">
+                                                <div class="col-md-4">
+                                                    <label class="form-label"><strong>Include Header Row</strong></label>
+                                                    <select name="include_header" class="form-select">
+                                                        <option value="1" {% if format.include_header %}selected{% endif %}>✓ Yes</option>
+                                                        <option value="0" {% if not format.include_header %}selected{% endif %}>✗ No</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="col-md-4">
+                                                    <label class="form-label"><strong>Include Timestamp</strong></label>
+                                                    <select name="include_timestamp" class="form-select">
+                                                        <option value="1" {% if format.include_timestamp %}selected{% endif %}>✓ Yes</option>
+                                                        <option value="0" {% if not format.include_timestamp %}selected{% endif %}>✗ No</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="col-md-4">
+                                                    <label class="form-label"><strong>Include User Info</strong></label>
+                                                    <select name="include_user_info" class="form-select">
+                                                        <option value="1" {% if format.include_user_info %}selected{% endif %}>✓ Yes</option>
+                                                        <option value="0" {% if not format.include_user_info %}selected{% endif %}>✗ No</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <h6 class="text-primary mb-3"><i class="fas fa-table me-1"></i> Column Header Customization</h6>
+                                            <div class="alert alert-info mb-3">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                <strong>Customize Data Columns:</strong> Change how column headers appear in generated files. 
+                                                Example: "Name" → "Student Name", "Email" → "Email Address"
+                                            </div>
+                                            
+                                            <div class="row g-3 mb-4">
+                                                <div class="col-12">
+                                                    <label class="form-label mb-2"><strong>Default Columns for {{ app_names[format.app_name] if app_names else format.app_name }}:</strong></label>
+                                                    
+                                                    {% if format.app_name == 'app1' %}
+                                                    <div class="table-responsive mb-3">
+                                                        <table class="table table-sm table-bordered">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th style="width: 30%;">Default Column</th>
+                                                                    <th style="width: 70%;">Your Custom Name</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr><td><code>Name (First Name)</code></td><td><small class="text-muted">First name from Zoom</small></td></tr>
+                                                                <tr><td><code>User Name (Display Name)</code></td><td><small class="text-muted">Display name from Zoom</small></td></tr>
+                                                                <tr><td><code>User Email</code></td><td><small class="text-muted">Email address</small></td></tr>
+                                                                <tr><td><code>Join Time & Leave Time</code></td><td><small class="text-muted">Meeting attendance times</small></td></tr>
+                                                                <tr><td><code>Duration (Minutes)</code></td><td><small class="text-muted">Total duration</small></td></tr>
+                                                                <tr><td><code>Session columns</code></td><td><small class="text-muted">Dynamic session names (e.g., Session 1, Session 2)</small></td></tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    {% elif format.app_name == 'app2' %}
+                                                    <div class="table-responsive mb-3">
+                                                        <table class="table table-sm table-bordered">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th style="width: 30%;">Default Column</th>
+                                                                    <th style="width: 70%;">Your Custom Name</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr><td><code>Email</code></td><td><small class="text-muted">Email from master file</small></td></tr>
+                                                                <tr><td><code>Participant Name</code></td><td><small class="text-muted">Name from master file</small></td></tr>
+                                                                <tr><td><code>Raw Name</code></td><td><small class="text-muted">Matched name from attendance</small></td></tr>
+                                                                <tr><td><code>Session columns</code></td><td><small class="text-muted">Dynamic session names from attendance file</small></td></tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    {% elif format.app_name == 'app3' %}
+                                                    <div class="table-responsive mb-3">
+                                                        <table class="table table-sm table-bordered">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th style="width: 30%;">Default Column</th>
+                                                                    <th style="width: 70%;">Your Custom Name</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr><td><code>email_id</code></td><td><small class="text-muted">Email address</small></td></tr>
+                                                                <tr><td><code>attendance(absent/present/leave)</code></td><td><small class="text-muted">Attendance status</small></td></tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                <div class="col-12">
+                                                    <label class="form-label"><strong>Custom Column Mappings (JSON)</strong></label>
+                                                    <textarea name="custom_columns_json" class="form-control font-monospace" rows="6" placeholder='Example:
+{
+  "Name (First Name)": "Student First Name",
+  "User Email": "Email Address",
+  "Duration (Minutes)": "Total Time (Minutes)"
+}'>{{ format.custom_columns_json or '' }}</textarea>
+                                                    <small class="text-muted d-block mt-2">
+                                                        <i class="fas fa-lightbulb me-1"></i>
+                                                        <strong>How to use:</strong> Add column mappings as "Original Name": "Your Custom Name". 
+                                                        Only include columns you want to rename.
+                                                    </small>
+                                                    <small class="text-muted d-block mt-1">
+                                                        <strong>Example for App 1:</strong> 
+                                                        <code>{"User Email": "Email Address", "Duration (Minutes)": "Total Duration"}</code>
+                                                    </small>
+                                                    <small class="text-muted d-block mt-1">
+                                                        <strong>Example for App 3:</strong> 
+                                                        <code>{"email_id": "Email Address", "attendance(absent/present/leave)": "Status"}</code>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-12">
+                                                <button type="submit" class="btn btn-primary btn-lg">
+                                                    <i class="fas fa-save me-1"></i>Save {{ app_names[format.app_name] if app_names else format.app_name }} Settings
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">No app format settings found</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="alert alert-info mb-0 mt-4">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        <strong>Tip:</strong> These settings apply when files are generated. Files will automatically download with format: "AppName_Date_Time.extension"
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Role-Based Formats (Advanced) -->
+        <div class="tab-pane fade" id="role-formats" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-user-cog me-2"></i>Output Format Settings by User Role (Advanced)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Advanced Feature:</strong> These settings configure output formats based on user roles (user, admin, superadmin). Most users should use "Output Formats (Per App)" tab instead.
+                    </div>
+                    
+                    <div class="accordion" id="outputFormatAccordion">
+                        {% if output_formats %}
+                            {% for format in output_formats %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading{{ loop.index }}">
+                                    <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="{% if loop.first %}true{% else %}false{% endif %}" aria-controls="collapse{{ loop.index }}">
+                                        <strong>{{ format.user_role | upper }}</strong>&nbsp;-&nbsp;Format: {{ format.file_format | upper }}, Header: {% if format.include_header %}Yes{% else %}No{% endif %}
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#outputFormatAccordion">
+                                    <div class="accordion-body">
+                                        <form method="POST" action="{{ url_for('update_output_format') }}">
+                                            <input type="hidden" name="user_role" value="{{ format.user_role }}">
+                                            
+                                            <div class="row g-3">
+                                                <div class="col-md-3">
+                                                    <label class="form-label">File Format</label>
+                                                    <select name="file_format" class="form-select">
+                                                        <option value="xlsx" {% if format.file_format == 'xlsx' %}selected{% endif %}>Excel (XLSX)</option>
+                                                        <option value="csv" {% if format.file_format == 'csv' %}selected{% endif %}>CSV</option>
+                                                        <option value="xls" {% if format.file_format == 'xls' %}selected{% endif %}>Excel (XLS)</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Date Format</label>
+                                                    <input type="text" name="date_format" class="form-control" value="{{ format.date_format }}" placeholder="%Y-%m-%d">
+                                                    <small class="text-muted">e.g., %Y-%m-%d, %d/%m/%Y</small>
+                                                </div>
+                                                
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Time Format</label>
+                                                    <input type="text" name="time_format" class="form-control" value="{{ format.time_format }}" placeholder="%H:%M:%S">
+                                                    <small class="text-muted">e.g., %H:%M:%S, %I:%M %p</small>
+                                                </div>
+                                                
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Include Header</label>
+                                                    <select name="include_header" class="form-select">
+                                                        <option value="1" {% if format.include_header %}selected{% endif %}>Yes</option>
+                                                        <option value="0" {% if not format.include_header %}selected{% endif %}>No</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Custom Headers (JSON)</label>
+                                                    <textarea name="custom_header_json" class="form-control font-monospace" rows="3" placeholder='{"Name": "Student Name"}'>{{ format.custom_header_json or '' }}</textarea>
+                                                    <small class="text-muted">Optional: JSON mapping of column names</small>
+                                                </div>
+                                                
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Column Order (JSON)</label>
+                                                    <textarea name="column_order_json" class="form-control font-monospace" rows="3" placeholder='["Name", "Email", "Date"]'>{{ format.column_order_json or '' }}</textarea>
+                                                    <small class="text-muted">Optional: JSON array of column order</small>
+                                                </div>
+                                                
+                                                <div class="col-12">
+                                                    <button type="submit" class="btn btn-warning">
+                                                        <i class="fas fa-save me-1"></i>Update Format Settings
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">No output format settings found</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 4: System Settings (Advanced) -->
+        <div class="tab-pane fade" id="system-settings" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>System Settings (Advanced)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Advanced Feature:</strong> System-level settings. Only modify if you know what you're doing.
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Setting Key</th>
+                                    <th>Value</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if app_settings %}
+                                    {% for setting in app_settings %}
+                                        {% if not setting.setting_key.endswith('_name') %}
+                                        <tr>
+                                            <td><code>{{ setting.setting_key }}</code></td>
+                                            <td>
+                                                <form method="POST" action="{{ url_for('update_settings') }}" class="d-inline">
+                                                    <input type="hidden" name="setting_key" value="{{ setting.setting_key }}">
+                                                    <div class="input-group input-group-sm">
+                                                        {% if setting.setting_type == 'boolean' %}
+                                                        <select name="setting_value" class="form-select form-select-sm">
+                                                            <option value="1" {% if setting.setting_value == '1' %}selected{% endif %}>Enabled</option>
+                                                            <option value="0" {% if setting.setting_value == '0' %}selected{% endif %}>Disabled</option>
+                                                        </select>
+                                                        {% else %}
+                                                        <input type="{% if setting.setting_type == 'integer' %}number{% else %}text{% endif %}" 
+                                                               name="setting_value" 
+                                                               class="form-control form-control-sm" 
+                                                               value="{{ setting.setting_value }}">
+                                                        {% endif %}
+                                                        <button type="submit" class="btn btn-sm btn-success">
+                                                            <i class="fas fa-save"></i>
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </td>
+                                            <td><span class="badge bg-info">{{ setting.setting_type }}</span></td>
+                                            <td><small>{{ setting.description or 'N/A' }}</small></td>
+                                            <td>
+                                                <form method="POST" action="{{ url_for('delete_setting', setting_key=setting.setting_key) }}" class="d-inline" onsubmit="return confirm('Delete this setting?');">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">No settings found</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Add New Setting -->
+                    <div class="mt-4">
+                        <h6>Add New System Setting</h6>
+                        <form method="POST" action="{{ url_for('create_setting') }}">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <input type="text" name="setting_key" class="form-control" placeholder="Setting Key" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" name="setting_value" class="form-control" placeholder="Value" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <select name="setting_type" class="form-select">
+                                        <option value="string">String</option>
+                                        <option value="integer">Integer</option>
+                                        <option value="boolean">Boolean</option>
+                                        <option value="float">Float</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" name="description" class="form-control" placeholder="Description">
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+/* Better spacing for tabs */
+.nav-tabs .nav-link {
+    color: #6c757d;
+    font-weight: 500;
+}
+.nav-tabs .nav-link.active {
+    color: #0d6efd;
+    font-weight: 600;
+}
+.nav-tabs .nav-link:hover {
+    color: #0d6efd;
+}
+
+/* Accordion improvements */
+.accordion-button:not(.collapsed) {
+    background-color: #e7f1ff;
+    color: #0d6efd;
+}
+
+/* Better form labels */
+.form-label strong {
+    color: #495057;
+}
+
+/* Monospace font for JSON fields */
+.font-monospace {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}

@@ -10,18 +10,17 @@
                 <h3><i class="fas fa-user-plus me-2"></i>Create New User</h3>
             </div>
             <div class="card-body">
-                {% with messages = get_flashed_messages() %}
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-
                 <form method="POST">
+                    {% if session.role == 'superadmin' %}
+                    <div class="mb-3">
+                        <label for="first_name" class="form-label">First Name (optional)</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Last Name (optional)</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name">
+                    </div>
+                    {% endif %}
                     <div class="mb-3">
                         <label for="email" class="form-label">Email Address</label>
                         <input type="email" class="form-control" id="email" name="email" required>
@@ -36,9 +35,15 @@
                             <option value="user">Normal User</option>
                             {% if session.role == 'superadmin' %}
                             <option value="admin">Admin</option>
+                            <option value="subsuperadmin">Sub-Superadmin</option>
                             {% endif %}
                         </select>
-                        <div class="form-text">Normal users have 15-day access by default. Only superadmins can create admins.</div>
+                        <div class="form-text">
+                            <strong>Normal User:</strong> Has 15-day access by default.<br>
+                            <strong>Admin:</strong> Can manage users they create.<br>
+                            <strong>Sub-Superadmin:</strong> Has extended permissions but controlled by Superadmin.<br>
+                            Only superadmins can create admins and sub-superadmins.
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="expires_at" class="form-label">Expiration Date (optional)</label>

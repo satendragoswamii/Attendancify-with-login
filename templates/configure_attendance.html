@@ -3,33 +3,90 @@
 {% block title %}Attendancify - Configure Attendance Sessions{% endblock %}
 
 {% block content %}
+<style>
+/* Compact mode for Configure Attendance Sessions */
+.session-item .card-header{padding:4px 8px !important;}
+.session-item .card-body{padding:8px 8px !important;}
+.session-item .form-label{font-size:12px; margin-bottom:2px;}
+.session-item .form-select.form-select-sm,
+.session-item .form-control.form-control-sm{padding:2px 6px; font-size:12px; height:1.9rem;}
+.session-item .btn.btn-sm{padding:2px 6px;}
+#sessionsContainer{max-height:60vh; overflow-y:auto; padding-right:.25rem; margin-top:.5rem;}
+#sessionForm .action-bar{margin-bottom:.5rem;}
+@media (min-width: 992px){ /* lg and up */
+  .session-item .row>[class*='col-']{margin-bottom:4px;}
+}
+/* Action bar compacting */
+#sessionForm .btn{padding:4px 8px; font-size:12px;}
+#sessionForm .btn.btn-lg{padding:6px 10px; font-size:13px;} /* fallback if any left */
+#sessionForm .form-check-label, #sessionForm label{font-size:12px;}
+#sessionForm .form-control{padding:4px 6px; font-size:12px; height:2rem;}
+/* Action bar layout: single-line on desktop, wraps only on small screens */
+#sessionForm .action-bar{display:flex; align-items:center; gap:6px; flex-wrap:nowrap;}
+#sessionForm .action-bar .group{display:flex; align-items:center; gap:6px; flex-wrap:nowrap;}
+#sessionForm .no-wrap{white-space:nowrap;}
+@media (max-width: 768px){
+  #sessionForm .action-bar{flex-wrap:wrap;}
+  #sessionForm .action-bar .group{flex-wrap:wrap;}
+}
+
+/* Session item states */
+.session-item { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.session-item.session-incomplete { border-left-color: var(--error-color) !important; }
+.session-item.session-complete { border-left-color: var(--success-color) !important; }
+
+/* Collapsible body */
+.session-item.collapsed .card-body { display: none; }
+.session-item .session-header-title { cursor: pointer; user-select: none; }
+.session-item .session-header-title i { transition: transform 0.2s ease; }
+.session-item.collapsed .session-header-title i.rotate-toggle { transform: rotate(-90deg); }
+</style>
 <div class="row justify-content-center">
     <div class="col-12">
         <div class="card">
-            <div class="card-header" style="background: linear-gradient(135deg, var(--primary-accent) 0%, var(--secondary-accent) 100%); color: white; padding: 1rem 1.5rem;">
+            <div class="card-header" style="background: linear-gradient(135deg, var(--primary-accent) 0%, var(--secondary-accent) 100%); color: white; padding: .4rem .6rem; border-radius: .4rem .4rem 0 0;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h4 class="mb-0"><i class="fas fa-cog me-2"></i>Configure Attendance Sessions</h4>
-                        <p class="mb-0" style="font-size: 0.85rem; opacity: 0.9;">Set up session times and attendance requirements</p>
+                        <h4 class="mb-0" style="font-size: .95rem;"><i class="fas fa-cog me-2"></i>Configure Attendance Sessions</h4>
+                        <p class="mb-0" style="font-size: .75rem; opacity: .9;">Configure start/end and minimum duration</p>
                     </div>
                 </div>
             </div>
-            <div class="card-body" style="padding: 1.5rem;">
-                <div class="alert alert-info mb-4" style="border-left: 4px solid var(--info-color); background: rgba(0, 217, 255, 0.1);">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Instructions:</strong> Configure each session with clear start/end times and minimum attendance duration.
+            <div class="card-body" style="padding: .75rem;">
+                <div class="alert alert-info py-1 px-2 mb-3 small" style="border-left: 3px solid var(--info-color); background: rgba(0, 217, 255, 0.08);">
+                    <i class="fas fa-info-circle me-1"></i> Set session start/end and min duration. Use date option on the right.
                 </div>
+
+                <!-- Hidden Session Config CSV Upload Form -->
+                <form id="sessionConfigForm" method="POST" action="{{ url_for('upload_session_config') }}" enctype="multipart/form-data" style="display:none;">
+                    <input type="file" id="sessionConfigFile" name="session_config_csv" accept=".csv">
+                </form>
 
                 <form id="sessionForm" method="POST" action="{{ url_for('process_attendance') }}">
                     <input type="hidden" id="session_row_count" name="session_row_count" value="0">
-                    
-                    <div class="mb-4">
-                        <button type="button" id="addSessionBtn" class="btn btn-success">
-                            <i class="fas fa-plus-circle me-2"></i>Add New Session
-                        </button>
-                        <span class="ms-3 text-muted" style="font-size: 0.85rem;">
-                            <i class="fas fa-lightbulb me-1"></i>Tip: You can add multiple sessions for batch processing
-                        </span>
+
+                    <div class="mb-3 action-bar">
+                        <div class="group">
+                            <button type="button" id="addSessionBtn" class="btn btn-success btn-sm">
+                                <i class="fas fa-plus-circle me-1"></i>Add Session
+                            </button>
+                            <button type="button" id="loadConfigBtn" class="btn btn-outline-primary btn-sm" title="Load Session Config CSV">
+                                <i class="fas fa-file-csv me-1"></i>Load Config
+                            </button>
+                            <a href="{{ url_for('download_session_config_template') }}" class="btn btn-outline-secondary btn-sm" title="Download dummy config template">
+                                <i class="fas fa-download me-1"></i>Download Template
+                            </a>
+                            <span class="text-muted small"><i class="fas fa-calendar-day me-1"></i>Date option:</span>
+                            <div class="form-check form-check-inline m-0 no-wrap">
+                                <input class="form-check-input" type="radio" name="date_mode" id="date_mode_per_session" value="per_session" checked>
+                                <label class="form-check-label small" for="date_mode_per_session">Per&nbsp;session</label>
+                            </div>
+                            <div class="form-check form-check-inline m-0 no-wrap">
+                                <input class="form-check-input" type="radio" name="date_mode" id="date_mode_global" value="global">
+                                <label class="form-check-label small" for="date_mode_global">Same&nbsp;date</label>
+                            </div>
+                            <input type="date" id="global_date" name="global_date" class="form-control form-control-sm" style="max-width:100px; display:none;">
+                        </div>
                     </div>
 
                     <div id="sessionsContainer" style="max-height: 60vh; overflow-y: auto; padding-right: 0.5rem;">
@@ -37,10 +94,10 @@
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mt-4 pt-3" style="border-top: 2px solid var(--border-color);">
-                        <a href="{{ url_for('attendance_generator') }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('attendance_generator') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-arrow-left me-2"></i>Back
                         </a>
-                        <button type="submit" class="btn btn-primary btn-lg">
+                        <button type="submit" class="btn btn-primary btn-sm">
                             <i class="fas fa-rocket me-2"></i>Process Attendance
                         </button>
                     </div>
@@ -57,45 +114,135 @@
     // Get mode and file names from template context
     const mode = '{{ mode }}';
     const fileNames = {{ file_names|tojson }} || [];
+    const sessionConfig = {{ session_config|tojson }} || [];
+    const sessionConfigTimeOnly = {{ session_config_time_only|tojson }};
     
     console.log('Mode:', mode);
     console.log('File names:', fileNames);
 
+    const globalDateRadio = document.getElementById('date_mode_global');
+    const perSessionDateRadio = document.getElementById('date_mode_per_session');
+    const globalDateInput = document.getElementById('global_date');
+
+    // Toggle visibility of global date input based on selection
+    function updateDateModeUI() {
+        if (globalDateRadio.checked) {
+            globalDateInput.style.display = 'inline-block';
+            // Convert existing session datetime-local to time-only inputs
+            document.querySelectorAll('.session-item').forEach((el, idx) => {
+                const startEl = el.querySelector('[name^="start_time_"]');
+                const endEl = el.querySelector('[name^="end_time_"]');
+                if (startEl && startEl.type === 'datetime-local') {
+                    const startVal = startEl.value;
+                    const endVal = endEl.value;
+                    // create time inputs
+                    const startTime = document.createElement('input');
+                    startTime.type = 'time';
+                    startTime.className = startEl.className;
+                    startTime.name = startEl.name; // keep same name
+                    startTime.value = startVal ? startVal.split('T')[1] : '';
+                    startTime.required = true;
+
+                    const endTime = document.createElement('input');
+                    endTime.type = 'time';
+                    endTime.className = endEl.className;
+                    endTime.name = endEl.name;
+                    endTime.value = endVal ? endVal.split('T')[1] : '';
+                    endTime.required = true;
+
+                    // replace
+                    startEl.parentNode.replaceChild(startTime, startEl);
+                    endEl.parentNode.replaceChild(endTime, endEl);
+                }
+            });
+        } else {
+            globalDateInput.style.display = 'none';
+            // Convert time inputs back to datetime-local if possible by combining with today's date
+            document.querySelectorAll('.session-item').forEach((el, idx) => {
+                const startEl = el.querySelector('[name^="start_time_"]');
+                const endEl = el.querySelector('[name^="end_time_"]');
+                if (startEl && startEl.type === 'time') {
+                    const startVal = startEl.value;
+                    const endVal = endEl.value;
+                    const today = new Date().toISOString().split('T')[0];
+                    const startDateTime = startVal ? `${today}T${startVal}` : '';
+                    const endDateTime = endVal ? `${today}T${endVal}` : '';
+
+                    const startDT = document.createElement('input');
+                    startDT.type = 'datetime-local';
+                    startDT.className = startEl.className;
+                    startDT.name = startEl.name;
+                    startDT.value = startDateTime;
+                    startDT.required = true;
+
+                    const endDT = document.createElement('input');
+                    endDT.type = 'datetime-local';
+                    endDT.className = endEl.className;
+                    endDT.name = endEl.name;
+                    endDT.value = endDateTime;
+                    endDT.required = true;
+
+                    startEl.parentNode.replaceChild(startDT, startEl);
+                    endEl.parentNode.replaceChild(endDT, endEl);
+                }
+            });
+        }
+    }
+
+    globalDateRadio.addEventListener('change', updateDateModeUI);
+    perSessionDateRadio.addEventListener('change', updateDateModeUI);
+
     document.getElementById('addSessionBtn').addEventListener('click', function() {
         const container = document.getElementById('sessionsContainer');
         const sessionDiv = document.createElement('div');
-        sessionDiv.className = 'card mb-3 session-item';
-        sessionDiv.style.cssText = 'border-left: 4px solid var(--primary-accent); box-shadow: var(--shadow-sm);';
+        sessionDiv.className = 'card mb-2 session-item session-incomplete';
+        sessionDiv.style.cssText = 'border-left: 3px solid var(--primary-accent); box-shadow: var(--shadow-xs);';
+        
+        // Decide input types based on current date mode: if global, show time inputs; else show datetime-local
+        const startInputType = globalDateRadio.checked ? 'time' : 'datetime-local';
+        const endInputType = globalDateRadio.checked ? 'time' : 'datetime-local';
+
         sessionDiv.innerHTML = `
-            <div class="card-header d-flex justify-content-between align-items-center" style="background: var(--bg-elevated); padding: 0.75rem 1rem;">
-                <span style="font-weight: 600; color: var(--primary-accent);"><i class="fas fa-calendar-day me-2"></i>Session ${sessionIndex + 1}</span>
-                <button type="button" class="btn btn-danger btn-sm remove-session" style="padding: 0.25rem 0.5rem;">
+            <div class="card-header d-flex justify-content-between align-items-center py-2 px-3" style="background: var(--bg-elevated);">
+                <div class="session-header-title d-flex align-items-center small" style="font-weight: 600; color: var(--primary-accent);">
+                    <i class="fas fa-chevron-down me-1 rotate-toggle"></i>
+                    <i class="fas fa-calendar-day me-1"></i>
+                    <span>Session ${sessionIndex + 1}</span>
+                    <span class="text-muted ms-2 small session-file-label"></span>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm remove-session py-1 px-2">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="card-body" style="padding: 1rem;">
-                <div class="row g-3">
+            <div class="card-body py-2 px-3">
+                <div class="row gx-2 gy-1 align-items-center">
                     ${mode === 'multiple' ? `
-                    <div class="col-md-12 mb-2">
-                        <label for="file_name_${sessionIndex}" class="form-label" style="font-weight: 600; font-size: 0.9rem;"><i class="fas fa-file me-1"></i>Select File</label>
-                        <select class="form-select form-select-lg" id="file_name_${sessionIndex}" name="file_name_${sessionIndex}" required style="border: 2px solid var(--border-color); font-size: 0.95rem;">
+                    <div class="col-md-12 mb-1">
+                        <label for="file_name_${sessionIndex}" class="form-label small mb-1" style="font-weight: 600;"><i class="fas fa-file me-1"></i>Select File</label>
+                        <select class="form-select form-select-sm" id="file_name_${sessionIndex}" name="file_name_${sessionIndex}" required>
                             <option value="">Choose a file...</option>
                             ${fileNames.map(name => `<option value="${name}">${name}</option>`).join('')}
                         </select>
                     </div>
-                    ` : ''}
-                    <div class="col-md-4">
-                        <label for="start_time_${sessionIndex}" class="form-label" style="font-weight: 600; font-size: 0.9rem;"><i class="fas fa-clock me-1"></i>Start Time</label>
-                        <input type="datetime-local" class="form-control form-control-lg" id="start_time_${sessionIndex}" name="start_time_${sessionIndex}" required style="border: 2px solid var(--border-color); font-size: 0.95rem; padding: 0.6rem;">
+                    ` : `<input type="hidden" name="file_name_${sessionIndex}" value="${fileNames[0] || ''}">`}
+                    <div class="col-md-12 mb-1">
+                        <label for="config_select_${sessionIndex}" class="form-label small mb-1" style="font-weight: 600;"><i class="fas fa-list me-1"></i>Session Config</label>
+        				<select class="form-select form-select-sm config-select" id="config_select_${sessionIndex}" data-index="${sessionIndex}">
+                            <option value="">Choose time from default time template</option>
+                        </select>
                     </div>
-                    <div class="col-md-4">
-                        <label for="end_time_${sessionIndex}" class="form-label" style="font-weight: 600; font-size: 0.9rem;"><i class="fas fa-clock me-1"></i>End Time</label>
-                        <input type="datetime-local" class="form-control form-control-lg" id="end_time_${sessionIndex}" name="end_time_${sessionIndex}" required style="border: 2px solid var(--border-color); font-size: 0.95rem; padding: 0.6rem;">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="time_required_${sessionIndex}" class="form-label" style="font-weight: 600; font-size: 0.9rem;"><i class="fas fa-stopwatch me-1"></i>Min. Duration (minutes)</label>
-                        <input type="number" class="form-control form-control-lg" id="time_required_${sessionIndex}" name="time_required_${sessionIndex}" min="0" step="0.1" value="30" required style="border: 2px solid var(--border-color); font-size: 0.95rem; padding: 0.6rem;">
-                    </div>
+                   <div class="col-md-4 col-lg-4">
+                       <label for="start_time_${sessionIndex}" class="form-label small mb-1" style="font-weight: 600;"><i class="fas fa-clock me-1"></i>Start Time</label>
+                       <input type="${startInputType}" class="form-control form-control-sm" id="start_time_${sessionIndex}" name="start_time_${sessionIndex}" required>
+                   </div>
+                   <div class="col-md-4">
+                       <label for="end_time_${sessionIndex}" class="form-label small mb-1" style="font-weight: 600;"><i class="fas fa-clock me-1"></i>End Time</label>
+                       <input type="${endInputType}" class="form-control form-control-sm" id="end_time_${sessionIndex}" name="end_time_${sessionIndex}" required>
+                   </div>
+                   <div class="col-md-4">
+                       <label for="time_required_${sessionIndex}" class="form-label small mb-1" style="font-weight: 600;"><i class="fas fa-stopwatch me-1"></i>Min. Duration (minutes)</label>
+                       <input type="number" class="form-control form-control-sm" id="time_required_${sessionIndex}" name="time_required_${sessionIndex}" min="0" step="0.1" value="30" required>
+                   </div>
                 </div>
             </div>
         `;
@@ -108,18 +255,230 @@
                 updateSessionCount();
             }
         });
+
+        // Header click toggles collapse/expand
+        const headerTitle = sessionDiv.querySelector('.session-header-title');
+        headerTitle.addEventListener('click', function() {
+            sessionDiv.classList.toggle('collapsed');
+        });
         
+        // Setup config select options and listeners
+        setupConfigSelect(sessionDiv, sessionIndex);
+
+        // Hook up validation to inputs to update visual state and auto-collapse when complete
+        setupSessionValidation(sessionDiv, sessionIndex);
+
         sessionIndex++;
         updateSessionCount();
     });
+
+    function optionLabel(row) {
+        // Always show only time in dropdown
+        const sh = row.start_hm || (row.session_start ? row.session_start.split(' ')[1]?.slice(0,5) : '');
+        const eh = row.end_hm || (row.session_end ? row.session_end.split(' ')[1]?.slice(0,5) : '');
+        return `${sh} to ${eh} (${row.time_required} min)`;
+    }
+
+    function populateConfigOptions(selectEl, fileName) {
+        // Clear existing options except placeholder
+        selectEl.querySelectorAll('option:not(:first-child)').forEach(o => o.remove());
+        let rows = sessionConfig;
+        if (mode === 'multiple' && fileName) {
+            // Show rows targeted to the selected file AND file-agnostic (no 'file' specified)
+            rows = rows.filter(r => !r.file || r.file === fileName);
+        }
+        rows.forEach((r, idx) => {
+            const opt = document.createElement('option');
+            opt.value = String(idx);
+            opt.textContent = optionLabel(r);
+            selectEl.appendChild(opt);
+        });
+    }
+
+    function applyConfigToRow(containerEl, idx, row) {
+        const startEl = containerEl.querySelector(`[name="start_time_${idx}"]`);
+        const endEl = containerEl.querySelector(`[name="end_time_${idx}"]`);
+        const trEl = containerEl.querySelector(`[name="time_required_${idx}"]`);
+        if (sessionConfigTimeOnly || (row.start_hm && row.end_hm)) {
+            // Time-only scheduling
+            const startHM = row.start_hm;
+            const endHM = row.end_hm;
+            if (startEl.type === 'datetime-local') {
+                // Use today's date as placeholder when per-session mode is active
+                const today = new Date().toISOString().split('T')[0];
+                startEl.value = `${today}T${startHM}`;
+                endEl.value = `${today}T${endHM}`;
+            } else {
+                // Global date mode -> inputs are time-only
+                startEl.value = startHM;
+                endEl.value = endHM;
+            }
+        } else {
+            const s = row.session_start.replace(' ', 'T');
+            const e = row.session_end.replace(' ', 'T');
+            if (startEl.type === 'datetime-local') {
+                startEl.value = s;
+                endEl.value = e;
+            } else {
+                startEl.value = s.split('T')[1].slice(0,5);
+                endEl.value = e.split('T')[1].slice(0,5);
+            }
+        }
+        trEl.value = row.time_required;
+        // If multiple mode, also set file if present
+        if (mode === 'multiple' && row.file) {
+            const fileSel = containerEl.querySelector(`#file_name_${idx}`);
+            if (fileSel && fileNames.includes(row.file)) {
+                fileSel.value = row.file;
+            }
+        }
+    }
+
+    function setupConfigSelect(sessionDiv, currentIndex) {
+        const idx = currentIndex; // before we increment global index
+        const selectEl = sessionDiv.querySelector(`#config_select_${idx}`);
+        const fileSel = sessionDiv.querySelector(`#file_name_${idx}`);
+        const fileName = fileSel ? fileSel.value : (fileNames[0] || '');
+        populateConfigOptions(selectEl, fileName);
+        // On file change, re-populate options
+        if (fileSel) {
+            fileSel.addEventListener('change', function() {
+                populateConfigOptions(selectEl, this.value);
+                // Update header label with selected file name
+                const lbl = sessionDiv.querySelector('.session-file-label');
+                if (lbl) {
+                    lbl.textContent = this.value ? `• ${this.value}` : '';
+                }
+                validateSession(sessionDiv, currentIndex);
+            });
+        }
+        // On select change, apply config
+        selectEl.addEventListener('change', function() {
+            const selIdx = this.value ? parseInt(this.value) : NaN;
+            if (!Number.isNaN(selIdx) && sessionConfig[selIdx]) {
+                applyConfigToRow(sessionDiv, idx, sessionConfig[selIdx]);
+                validateSession(sessionDiv, idx);
+            }
+        });
+    }
+
+    function setupSessionValidation(sessionDiv, idx) {
+        const inputs = [
+            sessionDiv.querySelector(`#file_name_${idx}`),
+            sessionDiv.querySelector(`#start_time_${idx}`),
+            sessionDiv.querySelector(`#end_time_${idx}`),
+            sessionDiv.querySelector(`#time_required_${idx}`)
+        ].filter(Boolean);
+        inputs.forEach(inp => {
+            inp.addEventListener('input', () => validateSession(sessionDiv, idx));
+            inp.addEventListener('change', () => validateSession(sessionDiv, idx));
+        });
+        // Initial state
+        validateSession(sessionDiv, idx);
+    }
+
+    function validateSession(sessionDiv, idx) {
+        const fileSel = sessionDiv.querySelector(`#file_name_${idx}`);
+        const startEl = sessionDiv.querySelector(`#start_time_${idx}`);
+        const endEl = sessionDiv.querySelector(`#end_time_${idx}`);
+        const trEl = sessionDiv.querySelector(`#time_required_${idx}`);
+        let complete = true;
+        if (mode === 'multiple' && fileSel && !fileSel.value) complete = false;
+        if (!startEl || !startEl.value) complete = false;
+        if (!endEl || !endEl.value) complete = false;
+        if (!trEl || !trEl.value) complete = false;
+
+        sessionDiv.classList.remove('session-incomplete', 'session-complete');
+        if (complete) {
+            sessionDiv.classList.add('session-complete');
+            // Keep sessions expanded even when complete; user can manually collapse via header click
+        } else {
+            sessionDiv.classList.add('session-incomplete');
+            sessionDiv.classList.remove('collapsed');
+        }
+    }
+
+    function importConfigRow(row) {
+        // Add a session row then populate values
+        document.getElementById('addSessionBtn').click();
+        const idx = sessionIndex - 1;
+        const container = document.getElementById('sessionsContainer');
+        const last = container.querySelectorAll('.session-item')[container.querySelectorAll('.session-item').length - 1];
+        if (!last) return;
+        // Set inputs
+        const startEl = last.querySelector(`[name="start_time_${idx}"]`);
+        const endEl = last.querySelector(`[name="end_time_${idx}"]`);
+        const trEl = last.querySelector(`[name="time_required_${idx}"]`);
+        // Convert to appropriate input values
+        const s = row.session_start.replace(' ', 'T');
+        const e = row.session_end.replace(' ', 'T');
+        if (startEl.type === 'datetime-local') {
+            startEl.value = s;
+            endEl.value = e;
+        } else {
+            // global date (time-only), extract HH:MM
+            startEl.value = s.split('T')[1].slice(0,5);
+            endEl.value = e.split('T')[1].slice(0,5);
+        }
+        trEl.value = row.time_required;
+        // If multiple mode and row.file exists, try to set select
+        if (mode === 'multiple' && row.file) {
+            const fileSel = last.querySelector(`#file_name_${idx}`);
+            if (fileSel) {
+                // Only set if exists in fileNames
+                if (fileNames.includes(row.file)) {
+                    fileSel.value = row.file;
+                }
+            }
+        }
+        updateSessionCount();
+    }
+
+    // Load Session Config CSV via hidden form
+    const loadConfigBtn = document.getElementById('loadConfigBtn');
+    const sessionConfigFile = document.getElementById('sessionConfigFile');
+    const sessionConfigForm = document.getElementById('sessionConfigForm');
+    if (loadConfigBtn && sessionConfigFile && sessionConfigForm) {
+        loadConfigBtn.addEventListener('click', function() {
+            sessionConfigFile.click();
+        });
+        sessionConfigFile.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                sessionConfigForm.submit();
+            }
+        });
+    }
 
     function updateSessionCount() {
         document.getElementById('session_row_count').value = document.querySelectorAll('.session-item').length;
     }
 
-    // Add initial session
+    // Add initial session once DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
+        // show/hide global date control based on initial selection
+        updateDateModeUI();
         document.getElementById('addSessionBtn').click();
+    });
+
+    // Before submitting, ensure we set a hidden field to indicate the selected date mode
+    document.getElementById('sessionForm').addEventListener('submit', function(e) {
+        // append a hidden input for date_mode if not present
+        let dm = document.querySelector('input[name="date_mode"]:checked');
+        if (!dm) {
+            dm = document.createElement('input');
+            dm.type = 'hidden';
+            dm.name = 'date_mode';
+            dm.value = 'per_session';
+            this.appendChild(dm);
+        }
+        // If global mode is selected, ensure global_date is set
+        if (globalDateRadio.checked) {
+            const gd = document.getElementById('global_date');
+            if (!gd.value) {
+                e.preventDefault();
+                alert('Please select a global date or switch to per-session dates.');
+            }
+        }
     });
 </script>
 {% endblock %}
