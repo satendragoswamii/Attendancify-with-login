@@ -759,19 +759,27 @@ def update_processed_file_name(file_id, new_name):
         conn.close()
 
 def get_files_eligible_for_auto_deletion():
-    """Get files that are eligible for automatic deletion (15 minutes after eligibility time)"""
+    """Get files that are eligible for automatic deletion (15 minutes after eligibility time)
+    
+    IMPORTANT: This uses local time comparison to avoid UTC/local time mismatch issues.
+    Files are deleted 15 minutes AFTER their eligible_for_deletion_at time.
+    """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+        # Calculate the cutoff time in local time (15 minutes ago)
+        # Files with eligible_for_deletion_at <= cutoff_time should be deleted
+        from datetime import datetime, timedelta
+        cutoff_time = (datetime.now() - timedelta(minutes=15)).strftime('%Y-%m-%d %H:%M:%S')
+        
         # Files eligible for deletion are those where eligible_for_deletion_at is not null
-        # and was 15+ minutes ago, and not manually deleted
-        # Using datetime comparison with proper format
+        # and was 15+ minutes ago (using local time), and not manually deleted
         cursor.execute('''
             SELECT * FROM processed_files 
             WHERE eligible_for_deletion_at IS NOT NULL
-            AND datetime(eligible_for_deletion_at) <= datetime('now', '-15 minutes')
+            AND eligible_for_deletion_at <= ?
             AND manually_deleted = 0
-        ''')
+        ''', (cutoff_time,))
         result = cursor.fetchall()
         cursor.close()  # CRITICAL: Close cursor before returning
         return result

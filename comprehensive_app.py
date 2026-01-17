@@ -161,8 +161,13 @@ def format_datetime_filter(s):
     
     return s
 
-# Directory for temporary files
-TEMP_DIR = tempfile.gettempdir()
+# Directory for temporary files - use dedicated uploads folder instead of system temp
+# This prevents OS-level temp cleanup and gives us more control
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# For backward compatibility, TEMP_DIR points to our uploads directory
+TEMP_DIR = UPLOAD_DIR
 
 # Path to main SQLite database (for backup/restore)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'attendancify.db')
@@ -170,7 +175,7 @@ DB_PATH = os.path.join(os.path.dirname(__file__), 'attendancify.db')
 # Periodic cleanup for temp files created by this app
 LAST_CLEANUP = 0
 
-def cleanup_temp_files(max_age_minutes: int = 5):
+def cleanup_temp_files(max_age_minutes: int = 120):
     """Remove temp files created by this app older than max_age_minutes.
     Files are identified by a 16-hex prefix followed by an underscore.
     This function excludes files that are registered in processed_files table,
@@ -833,9 +838,9 @@ def process_attendance_matching():
 
         session['matching_output_files'] = output_files
         
-        # Mark all files as eligible for deletion after 20 minutes from now
+        # Mark all files as eligible for deletion after 2 hours from now
         # (Files are already registered above, but we ensure eligibility time is set)
-        eligible_time = (datetime.now() + timedelta(minutes=20)).strftime('%Y-%m-%d %H:%M:%S')
+        eligible_time = (datetime.now() + timedelta(minutes=120)).strftime('%Y-%m-%d %H:%M:%S')
         for file_info in output_files:
             mark_file_eligible_for_deletion(file_info['path'], eligible_time)
 
@@ -2453,9 +2458,36 @@ def upload_attendance_file():
 def configure_attendance_sessions():
     mode = session.get('mode', 'single')
     file_names = session.get('file_names', [])
+    file_paths = session.get('file_paths', [])
     session_config = session.get('session_config', [])
     session_config_filename = session.get('session_config_filename', '')
     session_config_time_only = session.get('session_config_time_only', False)
+    
+    # Verify files still exist - check on every page load
+    if not file_paths:
+        flash('No files uploaded. Please upload your Zoom log files first.', 'error')
+        return redirect(url_for('attendance_generator'))
+    
+    # Check which files still exist
+    valid_paths = []
+    valid_names = []
+    for fp, fn in zip(file_paths, file_names):
+        if os.path.exists(fp):
+            valid_paths.append(fp)
+            valid_names.append(fn)
+    
+    if not valid_paths:
+        flash('Your uploaded files have expired. Please upload again. (Files are kept for 2 hours)', 'error')
+        session.pop('file_paths', None)
+        session.pop('file_names', None)
+        return redirect(url_for('attendance_generator'))
+    
+    # Update session if some files were lost
+    if len(valid_paths) < len(file_paths):
+        session['file_paths'] = valid_paths
+        session['file_names'] = valid_names
+        file_names = valid_names
+        flash(f'{len(file_paths) - len(valid_paths)} file(s) expired. {len(valid_paths)} file(s) remaining.', 'warning')
 
     # If no config loaded, seed with default time-only slots
     if not session_config:
@@ -2575,8 +2607,34 @@ def process_attendance():
         file_names = session.get('file_names', [])
         
         if not file_paths:
-            flash('No files found. Please upload again.')
+            flash('No files found in session. Please upload your files again.', 'error')
             return redirect(url_for('attendance_generator'))
+        
+        # Verify all files still exist on disk
+        missing_files = []
+        valid_paths = []
+        valid_names = []
+        for fp, fn in zip(file_paths, file_names):
+            if os.path.exists(fp):
+                valid_paths.append(fp)
+                valid_names.append(fn)
+            else:
+                missing_files.append(fn)
+        
+        if missing_files:
+            if not valid_paths:
+                flash(f'All uploaded files have expired or were removed. Please upload again. Files may expire after 2 hours of inactivity.', 'error')
+                # Clear session data
+                session.pop('file_paths', None)
+                session.pop('file_names', None)
+                return redirect(url_for('attendance_generator'))
+            else:
+                flash(f'Some files were not found and will be skipped: {", ".join(missing_files)}. Please re-upload if needed.', 'warning')
+                # Update session with valid files only
+                session['file_paths'] = valid_paths
+                session['file_names'] = valid_names
+                file_paths = valid_paths
+                file_names = valid_names
 
         # Get session configurations from form
         sessions_by_file = {}
@@ -2740,9 +2798,9 @@ def process_attendance():
         session['attendance_output_files'] = output_files
         flash('Processing Complete! Your attendance reports have been generated.', 'success')
         
-        # Mark all files as eligible for deletion after 20 minutes from now
+        # Mark all files as eligible for deletion after 2 hours from now
         # This happens AFTER all processing is complete, ensuring files are protected during the entire workflow
-        eligible_time = (datetime.now() + timedelta(minutes=20)).strftime('%Y-%m-%d %H:%M:%S')
+        eligible_time = (datetime.now() + timedelta(minutes=120)).strftime('%Y-%m-%d %H:%M:%S')
         for file_info in output_files:
             mark_file_eligible_for_deletion(file_info['path'], eligible_time)
 
@@ -3475,11 +3533,14 @@ def process_final_excel():
                     
                     # Register file in database for Processed Files page
                     user_email = session.get('user_id')
+                    # Set eligible for deletion after 2 hours
+                    eligible_time = (datetime.now() + timedelta(minutes=120)).strftime('%Y-%m-%d %H:%M:%S')
                     register_processed_file(
                         file_path=file_path,
                         file_name=out_filename,
                         user_email=user_email,
-                        processing_type='final_excel'
+                        processing_type='final_excel',
+                        eligible_for_deletion_at=eligible_time
                     )
                     
                     # Track processed file
