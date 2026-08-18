@@ -1,0 +1,29 @@
+# CODEOWNERS file for Attendancify
+# This file defines code ownership for critical files in the repository
+# Changes to these files require approval from the code owners
+
+# Core application files - MUST have owner approval
+comprehensive_app.py @satendravoice
+main.py @satendravoice
+attendance_processing.py @satendravoice
+attendance_magic.py @satendravoice
+ws gi.py @satendravoice
+
+# Configuration files - MUST have owner approval
+requirements.txt @satendravoice
+config/ @satendravoice
+settings/ @satendravoice
+
+# Templates - Important files
+templates/*.html @satendravoice
+
+# Static assets
+static/ @satendravoice
+
+# Database and security critical
+*.db @satendravoice
+*.sqlite @satendravoice
+PASSWORD_MANAGEMENT_SYS.py @satendravoice
+
+# Default code owner for all other files
+* @satendravoice
